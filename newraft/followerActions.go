@@ -62,6 +62,13 @@ func (n *Node) HandleAppendEntries(requestEvent AppendEntriesEvent) []Message{
 	responseEvent:= AppendEntriesResponseEvent{
 		Term: n.CurrTerm,
 		Succes: false,
+		/*  NOTE: this is a work arround, because is a fire and forget. If 2 resopnses go to the leader at the same time and the leader did 
+   			a nextIndex[follower]--, this will make him go to a netIndex of -1. Which is NEGATIVE and asserted. The 
+			follower sends the prevlogindex which is automatically the --, without making it the leader itself. 
+			Then the leader will take this MatchIndex, and assign it to the NextIndex, so the -- ocurrs on the assignation
+*/
+		MatchIndex: requestEvent.PrevLogIndex,
+		
 	}
 
 
@@ -69,6 +76,7 @@ func (n *Node) HandleAppendEntries(requestEvent AppendEntriesEvent) []Message{
 
 	//if log does not contain an entry on the prevLogIndex, automatic error, this makes sure we have something in the same index  
 	if requestEvent.PrevLogIndex > followerLastIndex{
+		responseEvent.MatchIndex = requestEvent.PrevLogIndex
 		responseMessage.Payload = responseEvent
 		return append(messages, responseMessage)
 
@@ -77,6 +85,7 @@ func (n *Node) HandleAppendEntries(requestEvent AppendEntriesEvent) []Message{
 	
 	//if the Term does not match, we have a problem
 	if requestEvent.PrevLogTerm != n.Log[requestEvent.PrevLogIndex].Term{
+		responseEvent.MatchIndex = requestEvent.PrevLogIndex
 		responseMessage.Payload = responseEvent
 		return append(messages, responseMessage)
 

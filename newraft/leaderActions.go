@@ -135,7 +135,14 @@ func (n *Node) HandleAppendEntriesResponse(requestEvent AppendEntriesResponseEve
 	if !requestEvent.Succes{
 		messages := []Message{}
 
-		n.NextIndex[followerId] --
+		//ignoramos porque sería una response que llego muyu tarde y esta STALE
+		if requestEvent.MatchIndex <= n.MatchIindex[followerId]{
+			return nil
+		}
+		
+		n.NextIndex[followerId] = requestEvent.MatchIndex
+
+		
 
 		//try again, with a lower NEXT index, to update it quickly
 		return append(messages, Message{

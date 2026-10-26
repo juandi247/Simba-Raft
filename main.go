@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-const matrixMode bool = true
-const fuzzyLevel simulator.FuzzyLevel = simulator.LOW
-
-
-
 
 func main() {
 
@@ -122,7 +117,7 @@ func StartMatrixMode(seed int64, maxTicks uint64, fuzzyLevelFlag string) error{
 	}
 
 
-	fuzzyConfig := simulator.NewFuzzyConfiguration(seed, fuzzyLevel)
+	fuzzyConfig := simulator.NewFuzzyConfiguration(seed, simulator.FuzzyLevel(fuzzyLevelFlag))
 
 
 	start:= time.Now()
