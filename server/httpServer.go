@@ -2,11 +2,10 @@ package server
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 	"simba/simulator"
-	"github.com/google/uuid"
 )
-
 
 type httpServer struct {
 	muxer     *http.ServeMux
@@ -19,24 +18,24 @@ type httpServer struct {
 //TODO: aca agregar el manager con los datos que va a tener, de pronto el mapa de eventos para cada sesion porque se debe pasar a los handlers
 func NewHttpServer(port string, isProd bool, certfile, keyfile string) *httpServer {
 
-	SimSessionManager:= &SimulatorSessionManager{
+	SimSessionManager := &SimulatorSessionManager{
 		simulatorSessions: make(map[uuid.UUID]*simulator.SimulationRunner),
 	}
 	mux := http.NewServeMux()
 	// we register it as wildcard
 	mux.Handle("/", homePage())
 	mux.Handle("/simulation", simulationPage())
-	mux.Handle("/configsim", configureSimulation(SimSessionManager) )
+	mux.Handle("/configsim", configureSimulation(SimSessionManager))
 
-	//handlers that have the middleware 
-	mux.Handle("/events", simulationUidCheckMiddleware(sseEventsHandler, SimSessionManager) )
-	mux.Handle("/startsim", simulationUidCheckMiddleware(startSimulation(SimSessionManager), SimSessionManager) )
-	mux.Handle("/pausesim", simulationUidCheckMiddleware(pauseSimulation, SimSessionManager) )
-	mux.Handle("/resumesim", simulationUidCheckMiddleware(resumeSimulation, SimSessionManager) )
-	mux.Handle("/changetime", simulationUidCheckMiddleware(changeSimulationSleep, SimSessionManager) )
+	//handlers that have the middleware
+	mux.Handle("/events", simulationUidCheckMiddleware(sseEventsHandler, SimSessionManager))
+	mux.Handle("/startsim", simulationUidCheckMiddleware(startSimulation(SimSessionManager), SimSessionManager))
+	mux.Handle("/pausesim", simulationUidCheckMiddleware(pauseSimulation, SimSessionManager))
+	mux.Handle("/resumesim", simulationUidCheckMiddleware(resumeSimulation, SimSessionManager))
+	mux.Handle("/changetime", simulationUidCheckMiddleware(changeSimulationSleep, SimSessionManager))
 	mux.Handle("/checkmap", checkMap(SimSessionManager))
 
-// mux.Handle("/resumesim", startSimulation(SimSessionManager) )
+	// mux.Handle("/resumesim", startSimulation(SimSessionManager) )
 	//TODO: Chcekear esto porque esta suiper mal asi tan directo
 	mux.Handle("/js/sim-events.js", serveStaticFiles())
 

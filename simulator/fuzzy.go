@@ -4,48 +4,46 @@ import (
 	"math/rand"
 )
 
-
 type FuzzyLevel string
 
 const (
-	LOW FuzzyLevel = "low" 
+	LOW    FuzzyLevel = "low"
 	MEDIUM FuzzyLevel = "medium"
-	HIGH FuzzyLevel = "high"
+	HIGH   FuzzyLevel = "high"
 )
 
 type FuzzyConfig struct {
-	rand *rand.Rand
+	rand            *rand.Rand
 	LatencyProb     float64
 	MessageLostProb float64
-	NodeCrashProb 	float64
+	NodeCrashProb   float64
 }
 
-const minCrashNodeDowntime= 25
-const maxCrashNodeDowntime=100
+const minCrashNodeDowntime = 25
+const maxCrashNodeDowntime = 100
 
-const minLatencyDelay= 3
-const maxLatencyDelay= 20
-
+const minLatencyDelay = 3
+const maxLatencyDelay = 20
 
 var FuzzyConfigMap = map[FuzzyLevel]FuzzyConfig{
 	LOW: {
 		LatencyProb:     0.01,
 		MessageLostProb: 0.001,
-		NodeCrashProb: 0.0001,
+		NodeCrashProb:   0.0001,
 	},
 	MEDIUM: {
 		LatencyProb:     0.05,
 		MessageLostProb: 0.005,
-		NodeCrashProb: 0.0009,
+		NodeCrashProb:   0.0009,
 	},
 	HIGH: {
 		LatencyProb:     0.10,
 		MessageLostProb: 0.010,
-		NodeCrashProb: 0.000999,
+		NodeCrashProb:   0.000999,
 	},
 }
 
-func NewFuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) (FuzzyConfig) {
+func NewFuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) FuzzyConfig {
 
 	source := rand.NewSource(seed)
 	rand := rand.New(source)
@@ -54,23 +52,20 @@ func NewFuzzyConfiguration(seed int64, fuzzyLevel FuzzyLevel) (FuzzyConfig) {
 	if !exists {
 		panic("Assertion for variable of fuzzy level")
 	}
-	fuzzyConfig.rand=rand
+	fuzzyConfig.rand = rand
 	return fuzzyConfig
 }
 
+func (fc *FuzzyConfig) determineCrashingProbabily() (bool, int64) {
 
-func (fc *FuzzyConfig) determineCrashingProbabily()(bool, int64){
-
-	randomNumber:= fc.rand.Float64()
-
+	randomNumber := fc.rand.Float64()
 
 	if randomNumber < fc.NodeCrashProb {
-		comeBackToLiveTick:=  minCrashNodeDowntime + fc.rand.Int63n(maxCrashNodeDowntime - minCrashNodeDowntime + 1)
+		comeBackToLiveTick := minCrashNodeDowntime + fc.rand.Int63n(maxCrashNodeDowntime-minCrashNodeDowntime+1)
 		return true, comeBackToLiveTick
 	}
 	return false, 0
 }
-
 
 /*
 this functions takes the configuration, and returns
@@ -78,15 +73,15 @@ bool: if the message its dropped or not
 int: the number of delay ticks
 
 */
-func (fc *FuzzyConfig) RandomizeNetwork() (bool, int64){
-	randomNumber:= fc.rand.Float64()
+func (fc *FuzzyConfig) RandomizeNetwork() (bool, int64) {
+	randomNumber := fc.rand.Float64()
 
 	if randomNumber < fc.MessageLostProb {
 		// The message was determinted to be LOST
 		return true, 0
 	}
 
-	delayTicks:=  minLatencyDelay + fc.rand.Int63n(maxLatencyDelay - minLatencyDelay + 1)
+	delayTicks := minLatencyDelay + fc.rand.Int63n(maxLatencyDelay-minLatencyDelay+1)
 	return false, delayTicks
 
 }

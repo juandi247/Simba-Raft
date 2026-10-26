@@ -12,4 +12,3 @@ func (st *SimTime) Advance(delta uint64) {
 }
 func (st *SimTime) Sleep(uint64) {
 }
-

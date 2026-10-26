@@ -1,6 +1,5 @@
 package simulator
 
-
 const TickFrequency = 1
 
 const SendAppendEntriesFreq = 40
@@ -9,7 +8,7 @@ const MinHeartBeatTimeout = 60
 const MaxHeartBeatTimeout = 150
 
 /*
-Assertions for ranges inside the constants, to have it in compile time. 
+Assertions for ranges inside the constants, to have it in compile time.
 */
 func init() {
 	if SendAppendEntriesFreq >= MinHeartBeatTimeout || SendAppendEntriesFreq >= MaxHeartBeatTimeout {
@@ -28,4 +27,3 @@ func init() {
 		panic("the minCrashNodeDowntime must be smaller than the max")
 	}
 }
-

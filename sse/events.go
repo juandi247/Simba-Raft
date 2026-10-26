@@ -4,160 +4,135 @@ import (
 	"simba/newraft"
 )
 
-
 type SseEvent interface {
 	GetEventType() SimulatorEventType
 }
 
-
 type SimulatorEventType int
+
 const (
-	TickAdvance SimulatorEventType =  iota
-	NodeCrashed 
-	NodeBackToLife 	
+	TickAdvance SimulatorEventType = iota
+	NodeCrashed
+	NodeBackToLife
 	HeartbeatTimeout
 	NodeStateUpdate
-	SimulationMessagePushed //pushed means it was pushed into the network event array
+	SimulationMessagePushed    //pushed means it was pushed into the network event array
 	SimulationMessageDelivered //message was delivered to the node
 	SimulationStopped
 )
-
-
-
 
 type TickAdvanceEvent struct {
 	Tick int
 }
 
-func NewTickAdvanceEvent(tick int) TickAdvanceEvent{
+func NewTickAdvanceEvent(tick int) TickAdvanceEvent {
 	return TickAdvanceEvent{
 		Tick: tick,
 	}
 }
 
-
-
 type NodeCrashedEvent struct {
 	NodeId string
 }
 
-func NewNodeCrashedEvent(nodeId string) NodeCrashedEvent{
+func NewNodeCrashedEvent(nodeId string) NodeCrashedEvent {
 	return NodeCrashedEvent{
-		NodeId:nodeId,
+		NodeId: nodeId,
 	}
 }
-
-
 
 type NodeBackToLifeEvent struct {
 	NodeId string
 }
 
-func NewNodeBackToLifeEvent(nodeId string) NodeBackToLifeEvent{
+func NewNodeBackToLifeEvent(nodeId string) NodeBackToLifeEvent {
 	return NodeBackToLifeEvent{
-		NodeId:nodeId,
+		NodeId: nodeId,
 	}
 }
-
-
 
 type HeartbeatTimeoutEvent struct {
 	NodeId                  string
 	HeartbeatTimeoutCounter int
 }
 
-func NewHeartbeatTimeoutEvent(nodeId string, timeoutCounter int) HeartbeatTimeoutEvent{
+func NewHeartbeatTimeoutEvent(nodeId string, timeoutCounter int) HeartbeatTimeoutEvent {
 	return HeartbeatTimeoutEvent{
-		NodeId: nodeId,
+		NodeId:                  nodeId,
 		HeartbeatTimeoutCounter: timeoutCounter,
 	}
 }
 
-
-
-
 type NodeStateUpdateEvent struct {
 	NodeId string
 	Term   int
-	Role newraft.Role
+	Role   newraft.Role
 	Log    []newraft.Entry
 
 	CommitIndex                      int
 	SimulatorHeartBeatTimeoutCounter int
-	NextIndex map[string]int 
-	MatchIndex map[string]int 
+	NextIndex                        map[string]int
+	MatchIndex                       map[string]int
 }
 
-
-func NewNodeStateUpdateEvent(node *newraft.Node) NodeStateUpdateEvent{
+func NewNodeStateUpdateEvent(node *newraft.Node) NodeStateUpdateEvent {
 	return NodeStateUpdateEvent{
-		NodeId: node.Id,
-		Term: node.CurrTerm,
-		Role: node.CurrentRole,
-		Log: node.Log,
-		CommitIndex  :node.CommitIndex,             
+		NodeId:                           node.Id,
+		Term:                             node.CurrTerm,
+		Role:                             node.CurrentRole,
+		Log:                              node.Log,
+		CommitIndex:                      node.CommitIndex,
 		SimulatorHeartBeatTimeoutCounter: node.SimulatorFields.HeartbeatTimeoutCounter,
-		NextIndex: node.NextIndex, 
-		MatchIndex: node.MatchIindex,
+		NextIndex:                        node.NextIndex,
+		MatchIndex:                       node.MatchIindex,
 	}
 }
 
-
-
-
-
-
-
 type SimMessage struct {
-	Index int
+	Index          int
 	SequenceNumber int
-	DeliveryTick uint64
-	Message      newraft.Message
+	DeliveryTick   uint64
+	Message        newraft.Message
 }
 
 // TODO: seria un array de mensajes con sus datos, o mejor un solo dato de mensaje? nose
 type SimulationMessagePushedEvent struct {
-	Messages []SimMessage 
+	Messages []SimMessage
 }
 
-func NewSimulationMessagesPushed(msgSlice []SimMessage) SimulationMessagePushedEvent{
+func NewSimulationMessagesPushed(msgSlice []SimMessage) SimulationMessagePushedEvent {
 	return SimulationMessagePushedEvent{
 		Messages: msgSlice,
 	}
 }
 
-
-
-
 type SimulationMessageDeliveredEvent struct {
 	MessageId int
 }
 
-func NewSimulationMessageDelivered(messageId int) SimulationMessageDeliveredEvent{
+func NewSimulationMessageDelivered(messageId int) SimulationMessageDeliveredEvent {
 	return SimulationMessageDeliveredEvent{
 		MessageId: messageId,
 	}
 }
 
-
-
 type SimulationStoppedEvent struct {
 }
 
-func NewSimulationStopped() SimulationStoppedEvent{
-	return SimulationStoppedEvent{
-	}
+func NewSimulationStopped() SimulationStoppedEvent {
+	return SimulationStoppedEvent{}
 }
 
-
 //boilerplate to implement the SSE interface
-func (t TickAdvanceEvent) GetEventType() SimulatorEventType{ return TickAdvance}
-func (t NodeCrashedEvent) GetEventType() SimulatorEventType{ return NodeCrashed}
-func (t HeartbeatTimeoutEvent) GetEventType() SimulatorEventType{ return HeartbeatTimeout}
-func (t NodeBackToLifeEvent) GetEventType() SimulatorEventType{ return NodeBackToLife}
-func (t NodeStateUpdateEvent) GetEventType() SimulatorEventType{ return NodeStateUpdate}
-func (t SimulationMessagePushedEvent) GetEventType() SimulatorEventType{ return SimulationMessagePushed}
-func (t SimulationMessageDeliveredEvent) GetEventType() SimulatorEventType{ return SimulationMessageDelivered}
-func (t SimulationStoppedEvent) GetEventType() SimulatorEventType{ return SimulationStopped}
-
-
+func (t TickAdvanceEvent) GetEventType() SimulatorEventType      { return TickAdvance }
+func (t NodeCrashedEvent) GetEventType() SimulatorEventType      { return NodeCrashed }
+func (t HeartbeatTimeoutEvent) GetEventType() SimulatorEventType { return HeartbeatTimeout }
+func (t NodeBackToLifeEvent) GetEventType() SimulatorEventType   { return NodeBackToLife }
+func (t NodeStateUpdateEvent) GetEventType() SimulatorEventType  { return NodeStateUpdate }
+func (t SimulationMessagePushedEvent) GetEventType() SimulatorEventType {
+	return SimulationMessagePushed
+}
+func (t SimulationMessageDeliveredEvent) GetEventType() SimulatorEventType {
+	return SimulationMessageDelivered
+}
+func (t SimulationStoppedEvent) GetEventType() SimulatorEventType { return SimulationStopped }

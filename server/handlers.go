@@ -11,45 +11,41 @@ import (
 	"github.com/google/uuid"
 )
 
-
-
-func homePage() http.HandlerFunc{
+func homePage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/index.html")
 	}
 }
 
-func simulationPage() http.HandlerFunc{
+func simulationPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/simulation.html")
 	}
 }
 
-func serveStaticFiles() http.HandlerFunc{
-return func(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "templates/js/sim-events.js")
-	//TODO: Checkear lo de http.FileServe etc, para los archivos estaticos, ( no habra mucho pero puede ser que ene lfuturo si)
-	
+func serveStaticFiles() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/js/sim-events.js")
+		//TODO: Checkear lo de http.FileServe etc, para los archivos estaticos, ( no habra mucho pero puede ser que ene lfuturo si)
+
 	}
 }
 
-
-func checkMap(sm *SimulatorSessionManager) http.HandlerFunc{
+func checkMap(sm *SimulatorSessionManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "We have %d simulations running", len(sm.simulatorSessions))
 	}
 }
 
-
-type SimulationConfig struct{
-	Seed int `json:"seed"`
-	FuzzLevel simulator.FuzzyLevel 
-	MaxTicks uint64
-
+type SimulationConfig struct {
+	Seed      int `json:"seed"`
+	FuzzLevel simulator.FuzzyLevel
+	MaxTicks  uint64
 }
 
 const SimRunnerSessionKey = "simRunnerSession"
-func simulationUidCheckMiddleware(next http.HandlerFunc,simulatorSessionManager *SimulatorSessionManager ) http.HandlerFunc{
+
+func simulationUidCheckMiddleware(next http.HandlerFunc, simulatorSessionManager *SimulatorSessionManager) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		readUid := r.URL.Query().Get("uid")
@@ -58,154 +54,135 @@ func simulationUidCheckMiddleware(next http.HandlerFunc,simulatorSessionManager 
 		// 	return
 		// }
 
-
-		uid, err:= uuid.Parse(readUid)
-		if err!=nil{
+		uid, err := uuid.Parse(readUid)
+		if err != nil {
 			fmt.Println("error parsing uid: ", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
+		simRunnerSession, exists := simulatorSessionManager.simulatorSessions[uid]
 
-		simRunnerSession, exists:= simulatorSessionManager.simulatorSessions[uid]
-
-		if !exists{
+		if !exists {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-
-
-		newCtx:= (context.WithValue(r.Context(), SimRunnerSessionKey ,simRunnerSession ))
+		newCtx := (context.WithValue(r.Context(), SimRunnerSessionKey, simRunnerSession))
 
 		next.ServeHTTP(w, r.WithContext(newCtx))
 	}
 
 }
 
-func configureSimulation(simulatorSessionManager *SimulatorSessionManager) http.HandlerFunc{
+func configureSimulation(simulatorSessionManager *SimulatorSessionManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-
-		if r.Method != http.MethodPost{
+		if r.Method != http.MethodPost {
 			return
 		}
 
-
-
-
 		var simConfig SimulationConfig
-		err:= json.NewDecoder(r.Body).Decode(&simConfig)
-		if err!=nil{
+		err := json.NewDecoder(r.Body).Decode(&simConfig)
+		if err != nil {
 			fmt.Println("error unmarshiling", err)
 			return
 		}
 
-
 		fuzzyConfig := simulator.NewFuzzyConfiguration(int64(simConfig.Seed), simConfig.FuzzLevel)
 
+		uidGenerated, err := uuid.NewUUID()
 
-		uidGenerated, err:= uuid.NewUUID()
-
-		if err!=nil{
+		if err != nil {
 			fmt.Println("Error generating UID", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		simulatorSessionManager.simulatorSessions[uidGenerated]= &simulator.SimulationRunner{
-			Uid: uidGenerated,
-			Time:               &simulator.SimTime{},
-			Network:            &simulator.SimNetwork{},
-			FuzzyProbabilities: fuzzyConfig,
-			EventChannel: make(chan sse.SseEvent, 100),
+		simulatorSessionManager.simulatorSessions[uidGenerated] = &simulator.SimulationRunner{
+			Uid:                 uidGenerated,
+			Time:                &simulator.SimTime{},
+			Network:             &simulator.SimNetwork{},
+			FuzzyProbabilities:  fuzzyConfig,
+			EventChannel:        make(chan sse.SseEvent, 100),
 			ShouldPublishEvents: true,
-			
+
 			//TODO: DEFAULT FOR NOW this 2
 			SleepingTime: 300,
-			MaxTicks: simConfig.MaxTicks,
+			MaxTicks:     simConfig.MaxTicks,
 		}
 
-
-		uidStruct:= struct{
+		uidStruct := struct {
 			Uid uuid.UUID
 		}{
-		Uid: uidGenerated,
-	}
+			Uid: uidGenerated,
+		}
 
 		data, err := json.Marshal(uidStruct)
-		if err!=nil{
+		if err != nil {
 			fmt.Println("error marshaling struct", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-		
-
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
 
 	}
 }
 
-
-
-type SseApiJson struct{
+type SseApiJson struct {
 	EventType int
-	Payload sse.SseEvent
+	Payload   sse.SseEvent
 }
 
 func sseEventsHandler(w http.ResponseWriter, r *http.Request) {
-		simRunner:= r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
+	simRunner := r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
 
-		//CONFIG FOR SSEEEE
-  		w.Header().Set("Content-Type", "text/event-stream")
-    		w.Header().Set("Cache-Control", "no-cache")
-    		w.Header().Set("Connection", "keep-alive")
+	//CONFIG FOR SSEEEE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 
+	rc := http.NewResponseController(w)
+	doneChan := r.Context().Done()
 
-		rc:= http.NewResponseController(w)
-		doneChan:= r.Context().Done()
-		
-		for{
+	for {
 
-		select{
+		select {
 
-			case <-doneChan:
-				//this would clean it up autoamtcially, it will end, and the own simulator 
-				simRunner.PauseContext.SetState(simulator.StateStopDefinetly)
-				return 
-			case event:= <- simRunner.EventChannel: 
+		case <-doneChan:
+			//this would clean it up autoamtcially, it will end, and the own simulator
+			simRunner.PauseContext.SetState(simulator.StateStopDefinetly)
+			return
+		case event := <-simRunner.EventChannel:
 
-				encodedData, err:= json.Marshal(SseApiJson{
-					EventType: int(event.GetEventType()),
-					Payload: event,
-				})
+			encodedData, err := json.Marshal(SseApiJson{
+				EventType: int(event.GetEventType()),
+				Payload:   event,
+			})
 
-				if err!=nil{
-					fmt.Println("error marshaling json", err)
-					return
-				}
-				
-
-				_, err = fmt.Fprintf(w, "data: %s \n\n", string(encodedData))
-				if err!=nil{
-					fmt.Println("error formating event", err)
-					return
-				}
-			rc.Flush()
+			if err != nil {
+				fmt.Println("error marshaling json", err)
+				return
 			}
+
+			_, err = fmt.Fprintf(w, "data: %s \n\n", string(encodedData))
+			if err != nil {
+				fmt.Println("error formating event", err)
+				return
+			}
+			rc.Flush()
 		}
+	}
 
 }
 
-
-
-func startSimulation(simSessionManager *SimulatorSessionManager) http.HandlerFunc{
+func startSimulation(simSessionManager *SimulatorSessionManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		simRunner:= r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
+		simRunner := r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
 
-		//cleans up automatically when its stopped or it finishes the ticks 
+		//cleans up automatically when its stopped or it finishes the ticks
 		go func() {
 			defer simSessionManager.cleanupSession(simRunner.Uid)
 
@@ -215,37 +192,32 @@ func startSimulation(simSessionManager *SimulatorSessionManager) http.HandlerFun
 	}
 }
 
-
-func pauseSimulation(w http.ResponseWriter, r *http.Request){
-		simRunner:= r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
-		simRunner.PauseContext.SetState(simulator.StatePaused)
-		w.WriteHeader(http.StatusOK)
+func pauseSimulation(w http.ResponseWriter, r *http.Request) {
+	simRunner := r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
+	simRunner.PauseContext.SetState(simulator.StatePaused)
+	w.WriteHeader(http.StatusOK)
 }
 
-
-func resumeSimulation(w http.ResponseWriter, r *http.Request){
-		simRunner:= r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
-		simRunner.PauseContext.SetState(simulator.StateRunning)
-		w.WriteHeader(http.StatusOK)
+func resumeSimulation(w http.ResponseWriter, r *http.Request) {
+	simRunner := r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
+	simRunner.PauseContext.SetState(simulator.StateRunning)
+	w.WriteHeader(http.StatusOK)
 }
 
+func changeSimulationSleep(w http.ResponseWriter, r *http.Request) {
 
-func changeSimulationSleep(w http.ResponseWriter, r *http.Request){
+	simRunner := r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
 
-	simRunner:= r.Context().Value(SimRunnerSessionKey).(*simulator.SimulationRunner)
-
-	var changeApi struct{
+	var changeApi struct {
 		TimeMode string
-
 	}
 
-	err:= json.NewDecoder(r.Body).Decode(&changeApi)
-
+	err := json.NewDecoder(r.Body).Decode(&changeApi)
 
 	var sleepingTime simulator.SleepMode
 
 	//use the contrary, because timemode slow, is a high SLEEP
-	switch changeApi.TimeMode{
+	switch changeApi.TimeMode {
 	case "slow":
 		sleepingTime = simulator.SleepHigh
 	case "normal":
@@ -253,12 +225,12 @@ func changeSimulationSleep(w http.ResponseWriter, r *http.Request){
 	case "fast":
 		sleepingTime = simulator.SleepSlow
 
-	default: 
+	default:
 		w.WriteHeader(http.StatusBadGateway)
-	return 
+		return
 	}
 
-	if err!=nil{
+	if err != nil {
 		fmt.Println("error decoding json")
 	}
 
@@ -266,5 +238,3 @@ func changeSimulationSleep(w http.ResponseWriter, r *http.Request){
 	simRunner.SleepingTime = sleepingTime
 	w.WriteHeader(http.StatusOK)
 }
-
-

@@ -9,84 +9,72 @@ import (
 )
 
 type SimNetwork struct {
-	messageQueue *PriorityQueue
-	FuzzyConfig  FuzzyConfig
-	TimeAdapter  adapters.TimeAdapter
-	IdCounter int //id counter for the messages to be deliverd
-	EventChan chan sse.SseEvent
+	messageQueue       *PriorityQueue
+	FuzzyConfig        FuzzyConfig
+	TimeAdapter        adapters.TimeAdapter
+	IdCounter          int //id counter for the messages to be deliverd
+	EventChan          chan sse.SseEvent
 	ShouldPublishEvent bool
-	simClient SimClient
+	simClient          SimClient
 }
-
 
 func (s *SimNetwork) SendMessage(messages []newraft.Message) {
 
-	events:= []sse.SimMessage{}
+	events := []sse.SimMessage{}
 
 	for _, message := range messages {
 		lost, delayTicks := s.FuzzyConfig.RandomizeNetwork()
 
-
 		//TODO: there should be a tracker or something for the later UI that indicates that a message was LOST
-
 
 		s.IdCounter++
 		if !lost {
 			simMessage := &sse.SimMessage{
 				SequenceNumber: s.IdCounter,
-				DeliveryTick: s.TimeAdapter.Now() + uint64(delayTicks),
-				Message:      message,
+				DeliveryTick:   s.TimeAdapter.Now() + uint64(delayTicks),
+				Message:        message,
 			}
 			heap.Push(s.messageQueue, simMessage)
 			//this events is just for the SSE
-			events=append(events, *simMessage)
+			events = append(events, *simMessage)
 		}
-		
+
 	}
 
-
-	if len(events)!=0{
-		PublishEvent(s.ShouldPublishEvent, s.EventChan,sse.NewSimulationMessagesPushed(events))
+	if len(events) != 0 {
+		PublishEvent(s.ShouldPublishEvent, s.EventChan, sse.NewSimulationMessagesPushed(events))
 		// s.EventChan <- sse.NewSimulationMessagesPushed(events)
 	}
 	// s.printQueueData()
 }
 
-
-func (s *SimNetwork) printQueueData(){
+func (s *SimNetwork) printQueueData() {
 	fmt.Println("-------------- QUEUE DATA on Tick ", s.TimeAdapter.Now(), "-------------------")
 
-	for i, v:= range *s.messageQueue{
- 	fmt.Printf(
-            "[%d] deliveryTick=%d  senderId=%v receiverId=%v \n",
-		i, 
-            v.DeliveryTick,
-            v.Message.SenderId,
-            v.Message.ReceiverId,
-
-        )
-		
+	for i, v := range *s.messageQueue {
+		fmt.Printf(
+			"[%d] deliveryTick=%d  senderId=%v receiverId=%v \n",
+			i,
+			v.DeliveryTick,
+			v.Message.SenderId,
+			v.Message.ReceiverId,
+		)
 
 	}
 	fmt.Println("---------------")
 }
 
-func (s *SimNetwork) SendTimeout(msg newraft.Message){
+func (s *SimNetwork) SendTimeout(msg newraft.Message) {
 	s.IdCounter++
-	simMessage:= &sse.SimMessage{
+	simMessage := &sse.SimMessage{
 		SequenceNumber: s.IdCounter,
-		DeliveryTick: s.TimeAdapter.Now() - 1,
-		Message: msg,
-		
+		DeliveryTick:   s.TimeAdapter.Now() - 1,
+		Message:        msg,
 	}
 	heap.Push(s.messageQueue, simMessage)
 }
 
-
-
-
 type PriorityQueue []*sse.SimMessage
-
 
 func (pq *PriorityQueue) Peek() *sse.SimMessage {
 	if pq.Len() == 0 {
@@ -95,7 +83,6 @@ func (pq *PriorityQueue) Peek() *sse.SimMessage {
 	return (*pq)[0]
 }
 func (pq PriorityQueue) Len() int { return len(pq) }
-
 
 func (pq PriorityQueue) Less(i, j int) bool {
 	if pq[i].DeliveryTick == pq[j].DeliveryTick {

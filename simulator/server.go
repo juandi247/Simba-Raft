@@ -42,8 +42,8 @@ func NewServer(port string, useHTTPS bool) *HttpServer {
 
 }
 
-func (s *HttpServer) StartServer() error{
-	if s.useHTTPS{
+func (s *HttpServer) StartServer() error {
+	if s.useHTTPS {
 		return http.ListenAndServeTLS(s.port, s.certFile, s.keyFile, s.muxer)
 	}
 	return http.ListenAndServe(s.port, s.muxer)

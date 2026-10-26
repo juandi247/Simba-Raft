@@ -7,12 +7,9 @@ const Yellow = "\033[33m"
 const Blue = "\033[34m"
 const Magenta = "\033[35m"
 const Cyan = "\033[36m"
- const Gray = "\033[37m"
- const White = "\033[97m"
+const Gray = "\033[37m"
+const White = "\033[97m"
 
-
-func PrintWithColor(color string, message string){
+func PrintWithColor(color string, message string) {
 	println(color + message + Reset)
 }
-
-

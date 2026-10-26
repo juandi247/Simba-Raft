@@ -50,25 +50,17 @@ type Node struct {
 	//candidate Data
 	VotesGranted map[string]int
 
-
-
 	SimulatorFields *SimulatorFields
 }
 
-
-//ONLY used in the simulator, but easy to put them here. 
-type SimulatorFields struct{
-	HeartbeatTimeoutCounter int //follower
-	ElectionTimeoutCounter int  //candidate
+//ONLY used in the simulator, but easy to put them here.
+type SimulatorFields struct {
+	HeartbeatTimeoutCounter         int //follower
+	ElectionTimeoutCounter          int //candidate
 	SendAppendEntriesTimeoutCounter int //leader
-	Alive bool
-	ComeBackToLife int
+	Alive                           bool
+	ComeBackToLife                  int
 }
-
-
-
-
-
 
 /* LAST LOG INDEX del leader o de mi current user, +1 , y claro esto deberia estar es en el propio */
 /*toma el last logIndex  */
@@ -83,7 +75,6 @@ func (n *Node) InitializeLeaderIndexes() {
 
 }
 
-
 // updates term and updates the voted for, saves both in STORAGE
 func (n *Node) updateTerm(newTerm int) {
 	if newTerm <= n.CurrTerm {
@@ -96,7 +87,7 @@ func (n *Node) updateTerm(newTerm int) {
 func (n *Node) HandleEvent(message Message) []Message {
 
 	//Ignore the message, we can also send back to him, to update the term, This will also check that is not a timeout message (needed because timeouts send term also)
-	if message.Term < n.CurrTerm && !isTimeoutMessage(message.Type){
+	if message.Term < n.CurrTerm && !isTimeoutMessage(message.Type) {
 		return nil
 	}
 
@@ -105,7 +96,6 @@ func (n *Node) HandleEvent(message Message) []Message {
 		n.updateTerm(message.Term)
 		n.transitionRole(FOLLOWER)
 	}
-
 
 	switch n.CurrentRole {
 
@@ -125,7 +115,7 @@ func (n *Node) HandleEvent(message Message) []Message {
 }
 
 func isTimeoutMessage(msgType MessageType) bool {
-	if msgType == MsgSendAppendEntriesTimeout || msgType == MsgHeartbeatTimeout || msgType== MsgElectionTimeout || msgType == MsgNewEntry{
+	if msgType == MsgSendAppendEntriesTimeout || msgType == MsgHeartbeatTimeout || msgType == MsgElectionTimeout || msgType == MsgNewEntry {
 		return true
 	}
 	return false
@@ -133,7 +123,7 @@ func isTimeoutMessage(msgType MessageType) bool {
 }
 
 func (n *Node) transitionRole(target Role) []Message {
-	//aca podriamos poner un restart de todos los timeouts, porque no importa mucho la verdad 
+	//aca podriamos poner un restart de todos los timeouts, porque no importa mucho la verdad
 
 	switch target {
 
@@ -149,8 +139,8 @@ func (n *Node) transitionRole(target Role) []Message {
 
 		n.CurrentRole = CANDIDATE
 		n.VotedFor = n.Id
-		for key, _ := range n.VotesGranted{
-			n.VotesGranted[key]=0
+		for key, _ := range n.VotesGranted {
+			n.VotesGranted[key] = 0
 		}
 
 		return n.sendRequestVote()
@@ -164,7 +154,6 @@ func (n *Node) transitionRole(target Role) []Message {
 		n.CurrentRole = LEADER
 		n.CurrentLeader = n.Id
 		return n.SendAppendEntries()
-		
 
 	default:
 		panic("UNKNOWN Role")
@@ -173,23 +162,22 @@ func (n *Node) transitionRole(target Role) []Message {
 
 	return nil
 }
+
 //data map comes from the matchindex or the voteGranted map, where the string is the ID (which we dont care), and the value is the value for the quorum check
 func minQuorumValue(dataMap map[string]int, quorum int) int {
 	//here we dont need to check the slice because there isnt even a valid number of votes
-	if len(dataMap) < quorum - 1{
+	if len(dataMap) < quorum-1 {
 		return 0
 	}
 
-
-	slice:= make([]int,0, len(dataMap))
-	for _ , value:= range dataMap{
+	slice := make([]int, 0, len(dataMap))
+	for _, value := range dataMap {
 		slice = append(slice, value)
 
 	}
 	slices.Sort(slice)
 
-	idx:= quorum - 1
+	idx := quorum - 1
 	return slice[idx]
 
 }
-
