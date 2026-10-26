@@ -7,6 +7,7 @@ import (
 	"simba/simulator"
 	"strings"
 	"sync"
+	"time"
 )
 
 const matrixMode bool = true
@@ -123,6 +124,13 @@ func StartMatrixMode(seed int64, maxTicks uint64, fuzzyLevelFlag string) error{
 
 	fuzzyConfig := simulator.NewFuzzyConfiguration(seed, fuzzyLevel)
 
+
+	start:= time.Now()
+
+	defer func(){
+	durtion:= time.Since(start)
+	 fmt.Printf("simulation real time duration: %v ms\n", durtion.Milliseconds())
+	}()
 
 	sim:= &simulator.SimulationRunner{
 			Time:               &simulator.SimTime{},
