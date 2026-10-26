@@ -46,7 +46,9 @@
   /* router hardware */
   --color-device: #191d25;
   --color-device-line: #444d5e;
-  --net-width: 37.5vh; /* the router is as tall as the screen and 300:800 */
+  --net-top: 3.25rem; /* room above the router for the Explicit / Hidden switch */
+  --net-height: calc(100vh - var(--net-top));
+  --net-width: calc(var(--net-height) * 0.375); /* the router is 300:800 */
 
   --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -206,10 +208,19 @@ legend { padding: 0; }
 .packet--lost { background: var(--color-down); box-shadow: 0 0 12px var(--color-down); }
 .lost-mark { position: absolute; left: 0; top: 0; font: 700 14px/1 var(--font-mono); color: var(--color-down); pointer-events: none; }
 
-/* pause / resume */
-#pause-btn:disabled { opacity: 0.5; cursor: default; }
-#pause-btn[aria-busy="true"] { cursor: progress; }
-.run__tag { color: var(--color-candidate); }
+/* pause / resume: a symbol, no text */
+.icon-btn { width: 2.25rem; height: 2.25rem; padding: 0; display: inline-grid; place-items: center; }
+.icon-btn svg { fill: currentColor; }
+.icon-btn .i-play { display: none; }
+.icon-btn[aria-pressed="true"] { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-text); }
+.icon-btn[aria-pressed="true"] .i-play { display: block; }
+.icon-btn[aria-pressed="true"] .i-pause { display: none; }
+.icon-btn:disabled { opacity: 0.5; cursor: default; }
+.icon-btn[aria-busy="true"] { cursor: progress; }
+
+/* Explicit / Hidden: right above the router */
+.net-switch { position: fixed; top: 0; right: 0; z-index: 3; width: var(--net-width); height: var(--net-top); display: flex; align-items: center; justify-content: center; gap: var(--space-1); font: 400 var(--text-sm)/1 var(--font-mono); color: var(--color-muted); }
+.net-switch .seg { margin-left: 0; }
 
 /* next / match index panel (same look as the full log) */
 .indexpanel { width: min(26rem, calc(100vw - var(--net-width) - 3rem)); }
@@ -233,9 +244,31 @@ legend { padding: 0; }
 .fulllog__head .button { margin-left: auto; }
 .fulllog__scroll { min-height: 0; overflow: auto; padding: 0 var(--space-2) var(--space-1); }
 .fulllog__table { width: 100%; border-collapse: collapse; font: 400 0.8rem/1.5 var(--font-mono); }
-.fulllog__table th, .fulllog__table td { text-align: left; padding: 0.15rem 0.75rem 0.15rem 0; vertical-align: top; }
+.fulllog__table th, .fulllog__table td { text-align: left; padding: 0.15rem 0.75rem 0.15rem 0.4rem; vertical-align: top; }
 .fulllog__table td:last-child { overflow-wrap: anywhere; }
 .fulllog__table th { position: sticky; top: 0; background: var(--color-surface); color: var(--color-muted); font-weight: 400; padding-top: var(--space-1); }
+
+/* entries that are already committed (index 1 up to the commit index) */
+.fulllog__table tr.is-committed td { background: color-mix(in srgb, var(--color-ok) 13%, transparent); }
+.fulllog__table tr.is-committed td:first-child { box-shadow: inset 3px 0 0 var(--color-ok); }
+.fulllog__foot { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-top: var(--border); font: 400 0.75rem/1.2 var(--font-mono); color: var(--color-muted); }
+.swatch { width: 0.9rem; height: 0.9rem; border-radius: 2px; background: color-mix(in srgb, var(--color-ok) 13%, transparent); box-shadow: inset 3px 0 0 var(--color-ok); }
+
+/* the simulation finished, or the connection was lost */
+.endcard { position: fixed; z-index: 8; left: var(--space-3); bottom: var(--space-3); width: min(44rem, calc(100vw - var(--net-width) - 3rem)); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-ok); border-radius: var(--radius); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65); animation: endcard-in 0.5s ease-out; }
+.endcard[data-kind="error"] { border-color: var(--color-down); }
+.endcard__icon { width: 3rem; height: 3rem; flex: none; fill: none; stroke: var(--color-ok); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.endcard[data-kind="finished"] .endcard__icon--error, .endcard[data-kind="error"] .endcard__icon--ok { display: none; }
+.endcard__icon--error { stroke: var(--color-down); }
+.endcard__icon circle { stroke-dasharray: 126; stroke-dashoffset: 126; animation: draw 0.6s ease-out 0.1s forwards; }
+.endcard__icon--ok path { stroke-width: 3.5; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 0.4s ease-out 0.6s forwards; }
+.endcard__icon--error path { stroke-width: 3.5; stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw 0.4s ease-out 0.6s forwards; }
+.endcard__text { flex: 1; }
+.endcard__text > * + * { margin-top: 0.35rem; }
+.endcard__title { font: 600 var(--text-lg)/1.2 var(--font-body); }
+.endcard .button { flex: none; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes endcard-in { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: none; } }
 
 /* ==========================================================
    NETWORK: the router pinned to the right edge
@@ -243,7 +276,7 @@ legend { padding: 0; }
 body[data-net-mode="hidden"] .only-explicit { display: none !important; }
 body[data-net-mode="explicit"] .only-hidden { display: none !important; }
 
-.net { position: fixed; top: 0; right: 0; height: 100vh; width: var(--net-width); max-width: 100vw; z-index: 3; font-size: clamp(0.6rem, 1.5vh, 0.85rem); }
+.net { position: fixed; top: var(--net-top); right: 0; height: var(--net-height); width: var(--net-width); max-width: 100vw; z-index: 3; font-size: clamp(0.6rem, 1.5vh, 0.85rem); }
 .net__art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .net__gate { position: absolute; left: 0; right: 0; text-align: center; font: 400 0.9em/1 var(--font-mono); color: var(--color-muted); }
 .net__gate--top { top: 1.2%; }
@@ -299,11 +332,13 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
   .nodes { position: static; display: grid; gap: var(--space-3); }
   .links, .packets { display: none; }
   .node { position: static; width: auto; transform: none; }
+  .endcard { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
   .countdown, .msgs li.is-new, .flow .dot.is-new { animation: none; }
   .node__circle, .node__role, .node { transition: none; }
   .packet { transition: none; }
+  .endcard, .endcard__icon circle, .endcard__icon path { animation: none; stroke-dashoffset: 0; }
 }
 </style>
 </head>
@@ -349,7 +384,7 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
         </div>
 
         <div class="field">
-          <label class="field__label" for="maxticks">Max ticks</label>
+          <label class="field__label" for="maxticks">MaxTicks</label>
           <input class="input" id="maxticks" name="maxticks" type="text" inputmode="numeric" autocomplete="off" value="1000" aria-describedby="maxticks-help maxticks-error">
           <p class="muted small" id="maxticks-help">How long the simulation runs, in ticks. From 1 to 50,000. Default: 1,000.</p>
           <p class="small" id="maxticks-error" role="alert" style="color: var(--color-error);" hidden></p>
@@ -391,8 +426,10 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
       <span>seed <b id="run-seed"></b></span>
       <span>max ticks <b id="run-maxticks"></b></span>
       <span>fuzz <b class="fuzz-tag" id="run-fuzz"></b></span>
-      <button class="button button--ghost" id="pause-btn" type="button" disabled>Pause</button>
-      <span class="run__tag" id="paused-tag" hidden>paused</span>
+      <button class="button button--ghost icon-btn" id="pause-btn" type="button" aria-pressed="false" aria-label="Pause the simulation" title="Pause the simulation" disabled>
+        <svg class="i-pause" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg>
+        <svg class="i-play" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>
+      </button>
       <span id="run-status" style="color: var(--color-error);" hidden></span>
       <div class="run__time">
         <span>time</span>
@@ -409,10 +446,6 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
           <p class="muted">Changing the speed does not affect determinism: the same seed always produces the same run.</p>
         </div>
       </div>
-      <div class="seg" id="net-mode" role="group" aria-label="Network messages">
-        <button type="button" data-mode="explicit" aria-pressed="true">Explicit</button>
-        <button type="button" data-mode="hidden" aria-pressed="false">Hidden</button>
-      </div>
       <div class="legend" id="legend" aria-label="Message colors"></div>
     </div>
 
@@ -421,6 +454,15 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
       <svg class="links" id="links" aria-hidden="true"></svg>
       <div class="nodes" id="nodes"></div>
       <div class="packets" id="packets" aria-hidden="true"></div>
+    </div>
+
+    <!-- Explicit / Hidden: right above the router -->
+    <div class="net-switch">
+      <span>messages</span>
+      <div class="seg" id="net-mode" role="group" aria-label="Network messages">
+        <button type="button" data-mode="explicit" aria-pressed="true">Explicit</button>
+        <button type="button" data-mode="hidden" aria-pressed="false">Hidden</button>
+      </div>
     </div>
 
     <!-- Network: the router. Rows and dots are created by handleNewMessage() (sim-events.js) -->
@@ -466,6 +508,7 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
           <tbody id="fulllog-body"></tbody>
         </table>
       </div>
+      <footer class="fulllog__foot"><i class="swatch"></i><span>Entry already committed</span></footer>
     </aside>
 
     <!-- Next / match index of the leader -->
@@ -481,6 +524,18 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
         </table>
       </div>
     </aside>
+
+    <!-- The simulation finished, or the connection with it was lost -->
+    <aside class="endcard" id="endcard" data-kind="finished" role="status" hidden>
+      <svg class="endcard__icon endcard__icon--ok" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M14 25l7 7 13-15"/></svg>
+      <svg class="endcard__icon endcard__icon--error" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M17 17l14 14M31 17l-14 14"/></svg>
+      <div class="endcard__text">
+        <h2 class="endcard__title" id="end-title"></h2>
+        <p class="muted small" id="end-detail"></p>
+        <p class="small" id="end-note"></p>
+      </div>
+      <button class="button" id="restart-btn" type="button"></button>
+    </aside>
   </section>
 
 </main>
@@ -494,7 +549,10 @@ body[data-net-mode="explicit"] .only-hidden { display: none !important; }
 <script>
 const $ = (id) => document.getElementById(id);
 const form = $('form');
-let SimUid = null; // returned by /configsim. /events, /startsim, /pausesim and /resumesim take it as ?uid=
+let SimUid = null;      // returned by /configsim. /events, /startsim, /pausesim, /resumesim and /changetime take it as ?uid=
+let SimConfig = null;   // { seed, fuzzLevel, maxTicks } of this run
+let eventSource = null; // the SSE connection
+let ended = false;      // true once the simulation finished or the connection was lost
 
 // Suggested seeds fill the input
 document.querySelectorAll('[data-seed]').forEach((b) =>
@@ -566,6 +624,7 @@ function clearStatus() {
 }
 
 async function startSimulation(config) {
+  SimConfig = config;
 
   // 1. Create/configure the simulation and get its UID
   try {
@@ -593,6 +652,7 @@ async function startSimulation(config) {
 
   // 2. Subscribe to SSE using the UID
   const events = new EventSource(`/events?uid=${encodeURIComponent(SimUid)}`);
+  eventSource = events;
 
   events.onmessage = (e) => {
     try {
@@ -604,6 +664,11 @@ async function startSimulation(config) {
 
   events.onerror = (err) => {
     console.error('SSE connection error:', err);
+    if (ended) return;
+    events.close(); // no automatic reconnection: this simulation is over
+    // The server closes the stream when the simulation ends. If that happens right after
+    // the last tick, the simulation finished. Otherwise the connection was lost.
+    endSimulation(currentTick >= SimConfig.maxTicks - 1 ? 'finished' : 'error');
   };
 
   console.log("VAMOS A LLAMAR START SIM")
@@ -622,13 +687,14 @@ async function startSimulation(config) {
 
 
 // ---------- Pause / resume ----------
-// One button. While a request is in flight the button is locked, so a slow answer cannot
-// turn into a pile of repeated clicks. If the server does not answer in 5 s, it unlocks.
+// One button with a symbol: pause while it runs, play while it is paused. While a request is in
+// flight the button is locked, so a slow answer cannot turn into a pile of repeated clicks.
+// If the server does not answer in 5 s, it unlocks.
 let paused = false;
 let pauseBusy = false;
 
 async function togglePause() {
-  if (pauseBusy || !SimUid) return;
+  if (pauseBusy || !SimUid || ended) return;
 
   const action = paused ? 'resume' : 'pause';
   const url = action === 'pause' ? '/pausesim' : '/resumesim';
@@ -637,7 +703,6 @@ async function togglePause() {
   pauseBusy = true;
   btn.disabled = true;
   btn.setAttribute('aria-busy', 'true');
-  btn.textContent = action === 'pause' ? 'Pausing…' : 'Resuming…';
 
   try {
     const response = await fetch(`${url}?uid=${encodeURIComponent(SimUid)}`, {
@@ -653,10 +718,13 @@ async function togglePause() {
     setStatus(`Could not ${action} the simulation.`);
   } finally {
     pauseBusy = false;
-    btn.disabled = false;
+    btn.disabled = ended;
     btn.removeAttribute('aria-busy');
-    btn.textContent = paused ? 'Resume' : 'Pause';
-    $('paused-tag').hidden = !paused;
+    // The CSS swaps the symbol with aria-pressed (true = paused)
+    const label = paused ? 'Resume the simulation' : 'Pause the simulation';
+    btn.setAttribute('aria-pressed', String(paused));
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
   }
 }
 
@@ -670,7 +738,7 @@ let timeMode = 'normal';
 let timeBusy = false;
 
 async function changeTime(mode) {
-  if (timeBusy || !SimUid || mode === timeMode) return;
+  if (timeBusy || !SimUid || ended || mode === timeMode) return;
 
   const buttons = document.querySelectorAll('#time-mode button');
   timeBusy = true;
@@ -697,7 +765,7 @@ async function changeTime(mode) {
     timeBusy = false;
     $('time-mode').removeAttribute('aria-busy');
     buttons.forEach((b) => {
-      b.disabled = false;
+      b.disabled = ended;
       b.setAttribute('aria-pressed', String(b.dataset.time === timeMode)); // the active mode stays marked
     });
   }
@@ -715,6 +783,46 @@ function setTimeHelp(open) {
 $('time-help-btn').addEventListener('click', () => setTimeHelp($('time-help').hidden));
 document.addEventListener('click', (e) => { if (!e.target.closest('.run__time')) setTimeHelp(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setTimeHelp(false); });
+
+
+// ---------- The end: the simulation finished, or the connection was lost ----------
+// checkSimulationEnd() is called on every tick from sim-events.js.
+function checkSimulationEnd(tick) {
+  if (SimConfig && tick >= SimConfig.maxTicks) endSimulation('finished');
+}
+
+function endSimulation(kind) { // kind: 'finished' or 'error'
+  if (ended) return;
+  ended = true;
+
+  if (eventSource) eventSource.close(); // no more events and no automatic reconnection
+
+  $('pause-btn').disabled = true;
+  document.querySelectorAll('#time-mode button').forEach((b) => { b.disabled = true; });
+
+  $('endcard').dataset.kind = kind;
+  if (kind === 'finished') {
+    $('end-title').textContent = 'Simulation finished';
+    $('end-detail').textContent =
+      `It ran ${SimConfig.maxTicks.toLocaleString('en-US')} ticks with seed ${SimConfig.seed} and fuzz level ${SimConfig.fuzzLevel}.`;
+    $('end-note').textContent =
+      'Want to run it again? With the same seed and fuzz level the result is 100% deterministic: you will get exactly the same run.';
+    $('restart-btn').textContent = 'Run another simulation';
+  } else {
+    $('end-title').textContent = 'Connection closed';
+    $('end-detail').textContent = 'The event stream with the simulation was closed before it finished.';
+    $('end-note').textContent = 'Go back to the simulation page to start a new one.';
+    $('restart-btn').textContent = 'Back to simulation';
+  }
+  $('endcard').hidden = false;
+}
+
+// Both buttons reload the page: the connection is closed and the setup form is back, so the
+// next simulation sends all its data again (/configsim, /events, /startsim...).
+$('restart-btn').addEventListener('click', () => {
+  if (eventSource) eventSource.close();
+  location.reload();
+});
 </script>
 </body>
 </html>

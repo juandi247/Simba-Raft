@@ -20,8 +20,8 @@ type FuzzyConfig struct {
 	NodeCrashProb 	float64
 }
 
-const minCrashNodeDowntime= 10
-const maxCrashNodeDowntime=50
+const minCrashNodeDowntime= 25
+const maxCrashNodeDowntime=100
 
 const minLatencyDelay= 3
 const maxLatencyDelay= 20

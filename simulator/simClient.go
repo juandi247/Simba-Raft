@@ -9,7 +9,7 @@ import (
 
 
 const ClientId = "CLIENT"
-var Accounts = []string{"Skipper", "Simba", "John wick", "Tom", "Diego", "Messi", "Sonsota", "Pipolino", "WindiRaptor", "Pedri"}
+var Accounts = []string{"Skipper", "Simba", "Rocky", "Tobi", "John wick", "Tom", "Diego", "Messi", "Sonsota", "Pipolino", "WindiRaptor", "Pedri"}
 var TransactionType = []string{"DEBIT", "CREDIT"}
 
 
