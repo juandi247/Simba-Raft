@@ -6,3 +6,5 @@ sonar-config.properties
 .ds_store
 .ds 
 cls
+*.exe
+checker.db
