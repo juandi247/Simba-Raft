@@ -2,9 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
-	"simba/simulator"
+	"sync"
 )
 
 type httpServer struct {
@@ -15,11 +14,11 @@ type httpServer struct {
 
 }
 
-//TODO: aca agregar el manager con los datos que va a tener, de pronto el mapa de eventos para cada sesion porque se debe pasar a los handlers
+// TODO: aca agregar el manager con los datos que va a tener, de pronto el mapa de eventos para cada sesion porque se debe pasar a los handlers
 func NewHttpServer(port string, isProd bool, certfile, keyfile string) *httpServer {
 
 	SimSessionManager := &SimulatorSessionManager{
-		simulatorSessions: make(map[uuid.UUID]*simulator.SimulationRunner),
+		simulatorSessions: sync.Map{},
 	}
 	mux := http.NewServeMux()
 	// we register it as wildcard
@@ -39,11 +38,19 @@ func NewHttpServer(port string, isProd bool, certfile, keyfile string) *httpServ
 	//TODO: Chcekear esto porque esta suiper mal asi tan directo
 	mux.Handle("/js/sim-events.js", serveStaticFiles())
 
+	staticFS := http.Dir("./templates/static")
+
+	mux.Handle("/static/", http.StripPrefix(
+		"/static/",
+		http.FileServer(staticFS),
+	))
+
 	server := &httpServer{
 		muxer: mux,
 		port:  port,
 	}
 	fmt.Println(isProd)
+	fmt.Println("muxer registered")
 
 	if isProd {
 		server.startFunc = func() error {

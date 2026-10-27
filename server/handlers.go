@@ -33,7 +33,13 @@ func serveStaticFiles() http.HandlerFunc {
 
 func checkMap(sm *SimulatorSessionManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "We have %d simulations running", len(sm.simulatorSessions))
+
+		var length int
+		sm.simulatorSessions.Range(func(key, value any) bool {
+			length++
+			return true
+		})
+		fmt.Fprintf(w, "We have %d simulations running", length)
 	}
 }
 
@@ -61,7 +67,7 @@ func simulationUidCheckMiddleware(next http.HandlerFunc, simulatorSessionManager
 			return
 		}
 
-		simRunnerSession, exists := simulatorSessionManager.simulatorSessions[uid]
+		simRunnerSession, exists := simulatorSessionManager.simulatorSessions.Load(uid)
 
 		if !exists {
 			w.WriteHeader(http.StatusNotFound)
@@ -99,7 +105,7 @@ func configureSimulation(simulatorSessionManager *SimulatorSessionManager) http.
 			return
 		}
 
-		simulatorSessionManager.simulatorSessions[uidGenerated] = &simulator.SimulationRunner{
+		simulatorSessionManager.simulatorSessions.Store(uidGenerated, &simulator.SimulationRunner{
 			Uid:                 uidGenerated,
 			Time:                &simulator.SimTime{},
 			Network:             &simulator.SimNetwork{},
@@ -110,7 +116,7 @@ func configureSimulation(simulatorSessionManager *SimulatorSessionManager) http.
 			//TODO: DEFAULT FOR NOW this 2
 			SleepingTime: 300,
 			MaxTicks:     simConfig.MaxTicks,
-		}
+		})
 
 		uidStruct := struct {
 			Uid uuid.UUID

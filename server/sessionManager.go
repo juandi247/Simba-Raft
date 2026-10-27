@@ -1,15 +1,14 @@
 package server
 
 import (
-	"simba/simulator"
-
+	"sync"
 	"github.com/google/uuid"
 )
 
 type SimulatorSessionManager struct {
-	simulatorSessions map[uuid.UUID]*simulator.SimulationRunner
+	simulatorSessions sync.Map 
 }
 
 func (s *SimulatorSessionManager) cleanupSession(uid uuid.UUID) {
-	delete(s.simulatorSessions, uid)
+	s.simulatorSessions.Delete(uid)
 }
