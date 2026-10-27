@@ -249,10 +249,10 @@ legend { padding: 0; }
 .fulllog__table th { position: sticky; top: 0; background: var(--color-surface); color: var(--color-muted); font-weight: 400; padding-top: var(--space-1); }
 
 /* entries that are already committed (index 1 up to the commit index) */
-.fulllog__table tr.is-committed td { background: color-mix(in srgb, var(--color-ok) 13%, transparent); }
-.fulllog__table tr.is-committed td:first-child { box-shadow: inset 3px 0 0 var(--color-ok); }
+.fulllog__table tr.is-committed td { background: color-mix(in srgb, var(--color-ok) 28%, transparent); }
+.fulllog__table tr.is-committed td:first-child { box-shadow: inset 4px 0 0 var(--color-ok); font-weight: 600; }
 .fulllog__foot { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-top: var(--border); font: 400 0.75rem/1.2 var(--font-mono); color: var(--color-muted); }
-.swatch { width: 0.9rem; height: 0.9rem; border-radius: 2px; background: color-mix(in srgb, var(--color-ok) 13%, transparent); box-shadow: inset 3px 0 0 var(--color-ok); }
+.swatch { flex: none; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--color-ok); }
 
 /* the simulation finished, or the connection was lost */
 .endcard { position: fixed; z-index: 8; left: var(--space-3); bottom: var(--space-3); width: min(44rem, calc(100vw - var(--net-width) - 3rem)); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-ok); border-radius: var(--radius); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65); animation: endcard-in 0.5s ease-out; }

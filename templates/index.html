@@ -3,329 +3,369 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simba – Raft with deterministic simulation testing</title>
+<title>Simba 🐱 – Raft with deterministic simulation testing</title>
 <meta name="description" content="Simba is a custom implementation of Raft, tested with deterministic simulation testing.">
+<link rel="icon" type="image/x-icon" href="/static/simba-favicon/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/simba-favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/simba-favicon/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/static/simba-favicon/apple-touch-icon.png">
+<link rel="manifest" href="/static/simba-favicon/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
 <style>
-/* ==========================================================
-   THEME TOKENS – change these to restyle the whole page
-   ========================================================== */
-:root {
-  /* color (dark by default) */
-  --color-bg: #0b0d10;
-  --color-surface: #12151a;
-  --color-text: #e7e9ee;
-  --color-muted: #8b93a2;
-  --color-border: #2a303a;
-  --color-accent: #8093ff;
-  --color-accent-text: #0b0d10;
-  --color-candidate: #f0b45a;
-  --color-code-bg: #08090c;
-  --color-code-text: #cfd4de;
-  --color-code-dim: #667082;
+:root{--color-bg:#0b0d10;--color-surface:#12151a;--color-text:#e7e9ee;--color-muted:#8b93a2;--color-border:#2a303a;--color-accent:#8093ff;--color-accent-text:#0b0d10;--color-candidate:#f0b45a;--color-down:#e0646b;--color-ok:#7fd69a;--follower:#4fb0a5;--msg-new:#f28bbd;--msg-vote:#f0b45a;--msg-vote-r:#a6d65f;
+--font-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+--text-sm:.875rem;--text-base:1.0625rem;--text-lg:1.25rem;--text-xl:1.75rem;--width:64rem;--s1:.5rem;--s2:1rem;--s3:1.5rem;--s4:3rem;--s5:5rem;--radius:4px;--border:1px solid var(--color-border)}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:4rem;color-scheme:dark}
+body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--text-base)/1.6 var(--font-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{line-height:1.15;margin:0;letter-spacing:-.02em}p{margin:0}a{color:inherit}
+:focus-visible{outline:2px solid var(--color-accent);outline-offset:3px}
+.container{width:100%;max-width:var(--width);margin:0 auto;padding:0 var(--s3)}
+.section{padding:var(--s5) 0;border-top:var(--border)}
+.stack>*+*{margin-top:var(--s2)}.stack-lg>*+*{margin-top:var(--s3)}
+.muted{color:var(--color-muted)}.small{font-size:var(--text-sm)}
+.title-hero{font-size:clamp(2rem,4.2vw,3rem);font-weight:700;letter-spacing:-.03em}
+.title-section{font-size:var(--text-xl);font-weight:600;margin-bottom:var(--s4)}
+.title-item{font-size:var(--text-lg);font-weight:600}
+.lead{font-size:var(--text-lg);color:var(--color-muted)}
+code,.mono{font-family:var(--font-mono)}
 
-  /* type */
-  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --text-sm: 0.875rem;
-  --text-base: 1.0625rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.75rem;
-  --text-hero: clamp(2rem, 4.2vw, 3rem);
-  --leading: 1.6;
+.topbar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--color-bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:var(--border)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:.75rem var(--s3)}
+.nav__brand{display:flex;align-items:center;gap:.5rem;font:600 var(--text-base)/1 var(--font-mono);text-decoration:none;flex:none}
+.nav__brand img{width:1.6rem;height:1.6rem;border-radius:50%;object-fit:cover}
+.nav__links{display:flex;gap:var(--s3);align-items:center;font-size:var(--text-sm);overflow-x:auto;scrollbar-width:none}
+.nav__links a{color:var(--color-muted);text-decoration:none;white-space:nowrap}
+.nav__links a:hover{color:var(--color-text)}
+.button{display:inline-block;padding:.75rem 1.25rem;background:var(--color-accent);color:var(--color-accent-text);font:600 var(--text-base)/1 var(--font-body);text-decoration:none;border-radius:var(--radius);transition:opacity .15s}
+.button:hover{opacity:.85}.button--small{padding:.5rem .9rem;font-size:var(--text-sm)}
+.nav__links a.button{color:var(--color-accent-text)}
 
-  /* layout */
-  --width: 64rem;
-  --width-text: 42rem;
-  --photo-size: 4.5rem;
-  --space-1: 0.5rem;
-  --space-2: 1rem;
-  --space-3: 1.5rem;
-  --space-4: 3rem;
-  --space-5: 5rem;
-  --radius: 4px;
-  --border: 1px solid var(--color-border);
-}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:var(--s4);align-items:center;padding:var(--s5) 0;max-width:var(--width)}
+.hero__img{width:11rem;height:11rem;object-fit:cover;border-radius:50%;border:3px solid var(--color-accent);animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
 
-/* Optional light theme: <html data-theme="light"> */
-:root[data-theme="light"] {
-  --color-bg: #f7f8fa; --color-surface: #ffffff; --color-text: #171a22;
-  --color-muted: #5d6472; --color-border: #d5d9e0; --color-accent: #2b4bff;
-  --color-accent-text: #ffffff; --color-code-bg: #171a22;
-}
+.rows>div{display:grid;grid-template-columns:14rem 1fr;gap:var(--s3);padding:var(--s2) 0;border-top:var(--border)}
+.rows dt{font:500 var(--text-base)/1.6 var(--font-mono)}.rows dd{margin:0;color:var(--color-muted);max-width:42rem}
+.split{display:grid;grid-template-columns:1fr 1.1fr;gap:var(--s4);align-items:center}
+.split+.split{margin-top:var(--s4)}
+.figure{margin:0;background:var(--color-surface);border:var(--border);border-radius:var(--radius);padding:var(--s2)}
+.figure svg{display:block;width:100%;height:auto;overflow:visible}
+.figure figcaption{margin-top:var(--s1);font-size:var(--text-sm);color:var(--color-muted)}
+.code{background:#08090c;color:#cfd4de;border:var(--border);font:400 var(--text-sm)/1.8 var(--font-mono);border-radius:var(--radius);padding:var(--s2) var(--s3);overflow-x:auto;white-space:pre}
+.code .k{color:var(--color-accent)}.code .w{color:var(--color-candidate)}
 
-/* ==========================================================
-   BASE
-   ========================================================== */
-*, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; color-scheme: dark; }
-html[data-theme="light"] { color-scheme: light; }
-body { margin: 0; background: var(--color-bg); color: var(--color-text); font: 400 var(--text-base)/var(--leading) var(--font-body); -webkit-font-smoothing: antialiased; }
-h1, h2, h3 { line-height: 1.15; margin: 0; letter-spacing: -0.02em; }
-p { margin: 0; }
-a { color: inherit; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+/* svg pieces */
+.nd{fill:color-mix(in srgb,var(--c,var(--follower)) 16%,var(--color-bg));stroke:var(--c,var(--follower));stroke-width:3;transform-box:fill-box;transform-origin:center;transition:fill .4s,stroke .4s}
+.nd.f{--c:var(--follower)}.nd.c{--c:var(--color-candidate)}.nd.l{--c:var(--color-accent)}.nd.down{--c:var(--color-muted);opacity:.6}
+.nd.hit{animation:hit .5s ease-out}
+@keyframes hit{40%{transform:scale(1.15)}}
+.ln{stroke:color-mix(in srgb,var(--color-text) 16%,transparent);stroke-width:1}
+.t{fill:var(--color-text);font:500 13px var(--font-mono);text-anchor:middle}
+.tm{fill:var(--color-muted);font:400 12px var(--font-mono);text-anchor:middle}
+.cap{fill:var(--color-text);font:500 13px var(--font-mono);text-anchor:middle}
+.x{fill:var(--color-down);font:700 16px var(--font-mono);text-anchor:middle;opacity:0}
+.badge{fill:var(--color-down);opacity:0;transition:opacity .3s}.badge.on{opacity:1}
 
-/* ==========================================================
-   COMPONENTS
-   ========================================================== */
-.container { width: 100%; max-width: var(--width); margin: 0 auto; padding: 0 var(--space-3); }
-.section { padding: var(--space-5) 0; border-top: var(--border); }
-.stack > * + * { margin-top: var(--space-2); }
-.stack-lg > * + * { margin-top: var(--space-3); }
-.muted { color: var(--color-muted); }
+/* time + network widgets */
+.clock{display:flex;align-items:baseline;justify-content:center;gap:.75rem;font-family:var(--font-mono)}
+.clock b{font-size:4.5rem;font-weight:500;color:var(--color-accent);line-height:1;min-width:3ch;text-align:right}
+.ticks{display:grid;grid-template-columns:repeat(20,1fr);gap:3px;margin-top:var(--s2)}
+.ticks i{height:.7rem;border-radius:2px;background:var(--color-border);transition:background .2s}
+.ticks i.on{background:var(--color-accent)}
+.queue{list-style:none;margin:var(--s1) 0 0;padding:0;font:400 .8rem/1.4 var(--font-mono);min-height:12.5rem}
+.queue li{display:flex;justify-content:space-between;gap:.5rem;padding:.45rem .6rem;border:var(--border);border-left:3px solid var(--m);border-radius:var(--radius);margin-bottom:.4rem;animation:qin .4s ease-out}
+.queue li span:first-child{color:var(--m)}.queue li span:last-child{color:var(--color-muted)}
+@keyframes qin{from{opacity:0;transform:translateX(1rem)}}
+.qhead{display:flex;justify-content:space-between;font:500 var(--text-sm)/1 var(--font-mono)}
+.qhead b{color:var(--color-accent);font-weight:500}
 
-.title-hero { font-size: var(--text-hero); font-weight: 700; letter-spacing: -0.03em; }
-.title-section { font-size: var(--text-xl); font-weight: 600; }
-.title-item { font-size: var(--text-lg); font-weight: 600; }
-.lead { font-size: var(--text-lg); color: var(--color-muted); }
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s2)}
+.grid4 h3{font-size:var(--text-base);margin:var(--s1) 0 .25rem}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s1)}
+.chip{padding:.2rem .7rem;border:1px solid var(--c);color:var(--c);border-radius:999px;font:500 .8rem/1.6 var(--font-mono)}
 
-.nav { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) 0; }
-.nav__brand { font: 600 var(--text-base)/1 var(--font-mono); text-decoration: none; }
-.nav__links { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); }
-.nav__links a { color: var(--color-muted); text-decoration: none; }
-.nav__links a:hover { color: var(--color-text); }
+/* time machine */
+.machine{display:block;width:min(15rem,70%);margin:0 auto}
+.ring{transform-origin:100px 100px;animation:spin 14s linear infinite}
+.hand{transform-origin:100px 100px;stroke-linecap:round}
+.hand.m{animation:spin 1.2s linear infinite}.hand.h{animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.counters{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin-top:var(--s2);font-family:var(--font-mono);text-align:center}
+.counters b{display:block;font-size:1.5rem;font-weight:500;color:var(--color-accent)}
+.counters span{font-size:.75rem;color:var(--color-muted)}
+.speed{text-align:center;margin-top:var(--s1);font:500 var(--text-sm)/1 var(--font-mono);color:var(--color-candidate)}
+.contact{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.footer{border-top:var(--border);padding:var(--s4) 0;font-size:var(--text-sm);color:var(--color-muted)}
 
-.button { display: inline-block; padding: 0.75rem 1.25rem; background: var(--color-accent); color: var(--color-accent-text); font: 600 var(--text-base)/1 var(--font-body); text-decoration: none; border-radius: var(--radius); transition: opacity 0.15s; }
-.button:hover { opacity: 0.85; }
-.button--small { padding: 0.5rem 0.9rem; font-size: var(--text-sm); }
-.nav__links a.button { color: var(--color-accent-text); }
-
-.photo { display: block; width: var(--photo-size); height: var(--photo-size); object-fit: cover; border-radius: var(--radius); border: var(--border); background: var(--color-surface); }
-.hero { padding: var(--space-5) 0; max-width: 46rem; }
-
-.rows > div { display: grid; grid-template-columns: 14rem 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-top: var(--border); }
-.rows dt { font: 500 var(--text-base)/1.6 var(--font-mono); }
-.rows dd { margin: 0; color: var(--color-muted); max-width: 42rem; }
-
-.split { display: grid; grid-template-columns: 1fr 1.1fr; gap: var(--space-4); align-items: center; }
-.split + .split { margin-top: var(--space-4); }
-
-/* figures (diagrams) */
-.figure { margin: 0; background: var(--color-surface); border: var(--border); border-radius: var(--radius); padding: var(--space-2); }
-.figure svg { display: block; width: 100%; height: auto; }
-.figure figcaption { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--color-muted); }
-.svg-box { fill: var(--color-bg); stroke: var(--color-border); stroke-width: 1.5; }
-.svg-box.accent, .svg-box.commit { stroke: var(--color-accent); }
-.svg-box.candidate { stroke: var(--color-candidate); }
-.svg-box.pending { stroke-dasharray: 4 3; stroke: var(--color-muted); }
-.svg-line { fill: none; stroke: var(--color-muted); stroke-width: 1.5; }
-.svg-arrow { fill: var(--color-muted); }
-.svg-mono { fill: var(--color-text); font: 500 13px var(--font-mono); }
-.svg-small { font: 400 12px var(--font-mono); }
-.svg-label { fill: var(--color-muted); font: 400 12px var(--font-body); }
-.muted-fill { fill: var(--color-muted); }
-
-.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
-.steps li { padding-left: var(--space-3); border-left: 2px solid var(--color-border); }
-.steps strong { display: block; }
-
-.code { background: var(--color-code-bg); color: var(--color-code-text); border: var(--border); font: 400 var(--text-sm)/1.8 var(--font-mono); border-radius: var(--radius); padding: var(--space-2) var(--space-3); overflow-x: auto; white-space: pre; }
-.code .dim { color: var(--color-code-dim); }
-.code .hl { color: var(--color-accent); }
-.code .warn { color: var(--color-candidate); }
-
-.footer { border-top: var(--border); padding: var(--space-4) 0; font-size: var(--text-sm); color: var(--color-muted); }
-
-@media (max-width: 860px) {
-  .split { grid-template-columns: 1fr; }
-  .rows > div { grid-template-columns: 1fr; gap: 0; }
-  .section { padding: var(--space-4) 0; }
-  .hero { padding: var(--space-4) 0; }
-  .nav__links a:not(.button) { display: none; }
-}
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+@media(max-width:860px){.split,.grid4,.hero{grid-template-columns:1fr}.rows>div{grid-template-columns:1fr;gap:0}.section{padding:var(--s4) 0}.hero{padding:var(--s4) 0}.hero__img{width:8rem;height:8rem}.nav__brand span{display:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
 </style>
 </head>
-
 <body>
 
-<header class="container nav">
-  <a class="nav__brand" href="/">simba</a>
+<div class="topbar"><div class="nav">
+  <a class="nav__brand" href="#top"><img src="/static/simba-favicon/android-chrome-192x192.png" alt=""><span>simba 🐱</span></a>
   <nav class="nav__links" aria-label="Main">
-    <a href="#overview">Overview</a>
-    <a href="#raft">Raft</a>
-    <a href="#how">How it works</a>
+    <a href="#overview">Overview</a><a href="#raft">Raft</a><a href="#simba">Simba</a><a href="#dst">DST</a><a href="#time">Time</a><a href="#network">Network</a><a href="#faults">Fault injection</a><a href="#contact">Contact</a>
     <a class="button button--small" href="/simulation">Start simulation</a>
   </nav>
-</header>
+</div></div>
 
-<main>
-
-  <section class="container hero stack-lg">
-    <!-- Put your cat photo next to this file as simba.jpg -->
-    <img class="photo" src="simba.jpg" alt="Simba, a cat" width="240" height="240">
-    <h1 class="title-hero">Simba is a custom implementation of Raft, tested with deterministic simulation.</h1>
-    <p class="lead">A personal project. Raft runs inside a deterministic simulator, so every bug can be replayed exactly.</p>
-    <p><a class="button" href="/simulation">Start simulation</a></p>
-  </section>
-
-  <section class="section" id="overview">
-    <div class="container stack-lg">
-      <h2 class="title-section">Overview</h2>
-      <dl class="rows" style="margin: 0;">
-        <div><dt>Raft</dt><dd>A consensus algorithm that lets a group of nodes agree on a shared log, even when some nodes crash or messages are delayed. Simba implements it from scratch.</dd></div>
-        <div><dt>Deterministic simulation testing</dt><dd>The whole system runs inside a simulation where the clock, the network and the failures are all controlled. The same run always gives the same result, so any failure can be replayed exactly.</dd></div>
-        <div><dt>Matrix mode</dt><dd>The deterministic simulation. The engine controls time, message delivery and crashes.</dd></div>
-        <div><dt>Real mode</dt><dd>The same Raft with real timeouts, persistent storage and messages sent over the network. Only the interfaces change.</dd></div>
-      </dl>
+<main id="top">
+  <section class="container hero">
+    <img class="hero__img" src="/static/simba-image.png" alt="Simba, a cat" width="176" height="176">
+    <div class="stack-lg">
+      <h1 class="title-hero">Simba 🐱 is a custom implementation of Raft, tested with deterministic simulation.</h1>
+      <p class="lead">A personal project. Raft runs inside a simulator where time, network and crashes are controlled, so every bug can be replayed exactly.</p>
+      <p><a class="button" href="/simulation">Start simulation</a></p>
     </div>
   </section>
 
-  <section class="section" id="raft">
-    <div class="container">
-      <h2 class="title-section" style="margin-bottom: var(--space-4);">Raft in short</h2>
+  <section class="section" id="overview"><div class="container">
+    <h2 class="title-section">Overview</h2>
+    <dl class="rows" style="margin:0">
+      <div><dt>Raft</dt><dd>A consensus algorithm. A group of nodes agrees on one shared log, even if some crash or messages are delayed.</dd></div>
+      <div><dt>Deterministic simulation testing</dt><dd>The clock, the network and the failures are all controlled by the engine. The same seed always gives the same run.</dd></div>
+      <div><dt>Matrix mode</dt><dd>The simulated Simba 🐱: time is a counter and the network is a queue of events.</dd></div>
+      <div><dt>Real mode</dt><dd>The same Raft with real timeouts, disk and sockets. Only the interfaces change.</dd></div>
+    </dl>
+  </div></section>
 
-      <div class="split">
-        <div class="stack">
-          <h3 class="title-item">Leader election</h3>
-          <p class="muted">Every node is a follower, a candidate or the leader. A follower that stops hearing from the leader becomes a candidate and asks the others for votes. If it gets a majority, it becomes the leader.</p>
-          <p class="muted">Each election starts a new term. A node that sees a higher term steps down.</p>
-        </div>
-        <figure class="figure">
-          <svg viewBox="0 0 420 250" role="img" aria-label="Node states: follower, candidate, leader">
-            <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="svg-arrow" d="M0 0L10 5L0 10z"/></marker></defs>
-            <path class="svg-line" marker-end="url(#arr)" d="M97 130 L178 72"/>
-            <path class="svg-line" marker-end="url(#arr)" d="M242 72 L323 130"/>
-            <path class="svg-line" marker-end="url(#arr)" d="M340 182 Q210 252 80 182"/>
-            <circle class="svg-box" cx="70" cy="150" r="34"/><text class="svg-mono" x="70" y="154" text-anchor="middle">follower</text>
-            <circle class="svg-box candidate" cx="210" cy="50" r="34"/><text class="svg-mono" x="210" y="54" text-anchor="middle">candidate</text>
-            <circle class="svg-box accent" cx="350" cy="150" r="34"/><text class="svg-mono" x="350" y="154" text-anchor="middle">leader</text>
-            <text class="svg-label" x="118" y="82" text-anchor="end">election timeout</text>
-            <text class="svg-label" x="302" y="82">majority of votes</text>
-            <text class="svg-label" x="210" y="240" text-anchor="middle">sees a higher term</text>
-          </svg>
-          <figcaption>The three roles and how a node moves between them.</figcaption>
-        </figure>
+  <section class="section" id="raft"><div class="container">
+    <h2 class="title-section">What is Raft?</h2>
+    <div class="split">
+      <div class="stack">
+        <h3 class="title-item">Leader election</h3>
+        <p class="muted">Every node is a follower, a candidate or the leader. A follower that stops hearing from the leader becomes a candidate and asks for votes. With a majority, it becomes the leader.</p>
+        <p class="muted">The leader sends heartbeats and replicates its log. An entry is committed once a majority has stored it.</p>
       </div>
+      <figure class="figure">
+        <svg id="raftsvg" viewBox="0 0 320 210" role="img" aria-label="Three nodes electing a leader"></svg>
+        <figcaption>An election, in a loop.</figcaption>
+      </figure>
+    </div>
+  </div></section>
 
-      <div class="split">
-        <div class="stack">
-          <h3 class="title-item">Log replication</h3>
-          <p class="muted">Commands go to the leader, which appends them to its log and sends them to the followers. An entry is committed once a majority of nodes has stored it.</p>
-          <p class="muted">Committed entries never change, and every node applies them in the same order.</p>
-        </div>
-        <figure class="figure">
-          <svg viewBox="0 0 340 225" role="img" aria-label="Logs of five nodes, with committed and uncommitted entries">
-            <text class="svg-mono muted-fill" x="102" y="16" text-anchor="middle">1</text>
-<text class="svg-mono muted-fill" x="152" y="16" text-anchor="middle">2</text>
-<text class="svg-mono muted-fill" x="202" y="16" text-anchor="middle">3</text>
-<text class="svg-mono muted-fill" x="252" y="16" text-anchor="middle">4</text>
-<text class="svg-mono muted-fill" x="302" y="16" text-anchor="middle">5</text>
-<text class="svg-mono" x="0" y="49">n1</text>
-<text class="svg-small muted-fill" x="30" y="49">leader</text>
-<rect class="svg-box commit" x="80" y="30" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="102" y="49" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="130" y="30" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="152" y="49" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="180" y="30" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="202" y="49" text-anchor="middle">t2</text>
-<rect class="svg-box commit" x="230" y="30" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="252" y="49" text-anchor="middle">t2</text>
-<rect class="svg-box pending" x="280" y="30" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="302" y="49" text-anchor="middle">t2</text>
-<text class="svg-mono" x="0" y="87">n2</text>
-<rect class="svg-box commit" x="80" y="68" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="102" y="87" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="130" y="68" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="152" y="87" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="180" y="68" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="202" y="87" text-anchor="middle">t2</text>
-<rect class="svg-box commit" x="230" y="68" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="252" y="87" text-anchor="middle">t2</text>
-<rect class="svg-box pending" x="280" y="68" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="302" y="87" text-anchor="middle">t2</text>
-<text class="svg-mono" x="0" y="125">n3</text>
-<rect class="svg-box commit" x="80" y="106" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="102" y="125" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="130" y="106" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="152" y="125" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="180" y="106" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="202" y="125" text-anchor="middle">t2</text>
-<rect class="svg-box commit" x="230" y="106" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="252" y="125" text-anchor="middle">t2</text>
-<text class="svg-mono" x="0" y="163">n4</text>
-<rect class="svg-box commit" x="80" y="144" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="102" y="163" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="130" y="144" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="152" y="163" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="180" y="144" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="202" y="163" text-anchor="middle">t2</text>
-<text class="svg-mono" x="0" y="201">n5</text>
-<rect class="svg-box commit" x="80" y="182" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="102" y="201" text-anchor="middle">t1</text>
-<rect class="svg-box commit" x="130" y="182" width="44" height="28" rx="3"/>
-<text class="svg-mono" x="152" y="201" text-anchor="middle">t1</text>
-          </svg>
-          <figcaption>Each box is a log entry and its term. Solid entries are committed. Dashed entries are not yet on a majority.</figcaption>
-        </figure>
+  <section class="section" id="simba"><div class="container">
+    <h2 class="title-section">How Simba 🐱 runs Raft</h2>
+    <div class="split">
+      <div class="stack">
+        <h3 class="title-item">One Raft, two modes</h3>
+        <p class="muted">Raft never touches time, storage or the network directly. It uses interfaces. Matrix mode plugs in simulated versions and Real mode plugs in the real ones.</p>
+        <p class="muted">Every node is just a struct with its own state. The engine moves them forward.</p>
+      </div>
+      <div class="stack">
+        <div class="code"><span class="k">type</span> Node <span class="k">struct</span> {
+  ID          <span class="w">string</span>
+  Term        <span class="w">int</span>
+  Role        <span class="w">Role</span>   <span class="muted">// follower, candidate, leader</span>
+  Log         <span class="w">[]Entry</span>
+  CommitIndex <span class="w">int</span>
+}</div>
+        <div class="code"><span class="k">type</span> Time    <span class="k">interface</span>{ Tick() <span class="w">int</span> }
+<span class="k">type</span> Storage <span class="k">interface</span>{ Save(...) }
+<span class="k">type</span> Network <span class="k">interface</span>{ Send(msg) }</div>
       </div>
     </div>
-  </section>
+  </div></section>
 
-  <section class="section" id="how">
-    <div class="container">
-      <h2 class="title-section" style="margin-bottom: var(--space-4);">How Simba runs Raft</h2>
-
-      <div class="split">
-        <div class="stack">
-          <h3 class="title-item">One Raft, two modes</h3>
-          <p class="muted">Raft never touches time, storage or the network directly. It talks to three interfaces. Matrix mode plugs in simulated versions, and Real mode plugs in the real ones.</p>
-        </div>
-        <figure class="figure">
-          <svg viewBox="0 0 480 262" role="img" aria-label="Raft core using time, storage and network interfaces, with Matrix and Real implementations">
-            <rect class="svg-box accent" x="150" y="8" width="180" height="48" rx="4"/><text class="svg-mono" x="240" y="37" text-anchor="middle">Raft event loop</text>
-            <path class="svg-line" d="M240 56 L147 98 M240 56 L282 98 M240 56 L417 98"/>
-            <rect class="svg-box" x="90" y="98" width="115" height="36" rx="4"/><text class="svg-mono" x="147" y="121" text-anchor="middle">Time</text>
-            <rect class="svg-box" x="225" y="98" width="115" height="36" rx="4"/><text class="svg-mono" x="282" y="121" text-anchor="middle">Storage</text>
-            <rect class="svg-box" x="360" y="98" width="115" height="36" rx="4"/><text class="svg-mono" x="417" y="121" text-anchor="middle">Network</text>
-            <path class="svg-line" d="M147 134 V164 M282 134 V164 M417 134 V164 M147 196 V210 M282 196 V210 M417 196 V210"/>
-            <text class="svg-mono" x="0" y="185">Matrix</text>
-            <rect class="svg-box" x="90" y="164" width="115" height="32" rx="4"/><text class="svg-small" x="147" y="184" text-anchor="middle" fill="currentColor" style="fill:var(--color-text)">ticks</text>
-            <rect class="svg-box" x="225" y="164" width="115" height="32" rx="4"/><text class="svg-small" x="282" y="184" text-anchor="middle" style="fill:var(--color-text)">in memory</text>
-            <rect class="svg-box" x="360" y="164" width="115" height="32" rx="4"/><text class="svg-small" x="417" y="184" text-anchor="middle" style="fill:var(--color-text)">event log</text>
-            <text class="svg-mono" x="0" y="233">Real</text>
-            <rect class="svg-box" x="90" y="210" width="115" height="32" rx="4"/><text class="svg-small" x="147" y="230" text-anchor="middle" style="fill:var(--color-text)">system clock</text>
-            <rect class="svg-box" x="225" y="210" width="115" height="32" rx="4"/><text class="svg-small" x="282" y="230" text-anchor="middle" style="fill:var(--color-text)">disk</text>
-            <rect class="svg-box" x="360" y="210" width="115" height="32" rx="4"/><text class="svg-small" x="417" y="230" text-anchor="middle" style="fill:var(--color-text)">sockets</text>
-          </svg>
-          <figcaption>The same Raft code runs on top of either set of implementations.</figcaption>
-        </figure>
+  <section class="section" id="dst"><div class="container">
+    <h2 class="title-section">Deterministic simulation testing</h2>
+    <dl class="rows" style="margin:0">
+      <div><dt>What is it?</dt><dd>Run the whole system inside a simulation where everything that could be random is driven by one seed.</dd></div>
+      <div><dt>Why?</dt><dd>Distributed bugs are rare and hard to reproduce. With a seed, a failing run can be replayed exactly, as many times as needed.</dd></div>
+      <div><dt>Fast</dt><dd>Time is not real, so hours of cluster life run in seconds. The limit is your CPU.</dd></div>
+    </dl>
+    <div class="split" style="margin-top:var(--s4)">
+      <div class="stack">
+        <h3 class="title-item">A time machine for your cluster</h3>
+        <p class="muted">There is no real clock and no real network. Simba 🐱 never waits for a timeout or a packet: it just moves the counter forward.</p>
+        <p class="muted">So the only limit is how fast your CPU can run the loop. Days of cluster life fit in a few seconds, and every run can be replayed with its seed.</p>
       </div>
-
-      <div class="split">
-        <div class="stack">
-          <h3 class="title-item">Matrix mode, step by step</h3>
-          <ol class="steps">
-            <li><strong>Time is a counter.</strong><span class="muted">The engine is a loop that advances time in ticks: plain, monotonic integers.</span></li>
-            <li><strong>Messages are fire and forget.</strong><span class="muted">Nodes never call each other. Every message goes into the event log.</span></li>
-            <li><strong>Every event has a delivery tick.</strong><span class="muted">Each entry stores its type, sender, receiver and the tick when it arrives. A later tick simulates network latency.</span></li>
-            <li><strong>Nodes reply in the future.</strong><span class="muted">When the tick arrives, the node handles the message and schedules its reply at a future tick.</span></li>
-            <li><strong>Failures are events too.</strong><span class="muted">Crashes and restarts go through the same log, so they replay like everything else.</span></li>
-          </ol>
-        </div>
-        <div class="stack">
-          <div class="code"><span class="dim">tick  event          from → to   delivers</span>
-12    <span class="warn">RequestVote</span>    n1 → n2     @ 14
-12    <span class="warn">RequestVote</span>    n1 → n3     @ 15
-14    <span class="hl">VoteGranted</span>    n2 → n1     @ 17
-15    <span class="hl">VoteGranted</span>    n3 → n1     @ 16
-16    <span class="hl">AppendEntries</span>  n1 → n2     @ 19
-20    NodeCrash      n3          @ 20</div>
-          <p class="muted" style="font-size: var(--text-sm);">An example of what the event log looks like.</p>
-        </div>
-      </div>
+      <figure class="figure">
+        <svg class="machine" viewBox="0 0 200 200" role="img" aria-label="Simba inside a spinning clock, a time machine">
+          <defs><clipPath id="catclip"><circle cx="100" cy="100" r="46"/></clipPath></defs>
+          <circle class="ring" cx="100" cy="100" r="92" fill="none" stroke="var(--color-border)" stroke-width="3" stroke-dasharray="3 9"/>
+          <circle cx="100" cy="100" r="50" fill="var(--color-bg)" stroke="var(--color-accent)" stroke-width="3"/>
+          <image href="/static/simba-image.png" x="54" y="54" width="92" height="92" preserveAspectRatio="xMidYMid slice" clip-path="url(#catclip)"/>
+          <line class="hand m" x1="100" y1="38" x2="100" y2="14" stroke="var(--color-accent)" stroke-width="4"/>
+          <line class="hand h" x1="100" y1="38" x2="100" y2="24" stroke="var(--color-candidate)" stroke-width="5"/>
+        </svg>
+        <div class="counters"><div><b id="cpu">0.0 s</b><span>real time, your CPU</span></div><div><b id="cl">0 h</b><span>time inside the cluster</span></div></div>
+        <div class="speed" id="spd">10 s of CPU = 10 days of cluster</div>
+        <figcaption>Illustrative numbers. No real time, no real network.</figcaption>
+      </figure>
     </div>
-  </section>
+  </div></section>
 
+  <section class="section" id="time"><div class="container">
+    <h2 class="title-section">Time</h2>
+    <div class="split">
+      <div class="stack">
+        <h3 class="title-item">Time is an integer</h3>
+        <p class="muted">There is no system clock. The engine is a loop that adds one to a counter. Timeouts are just “wake me at tick N”.</p>
+        <div class="code"><span class="k">for</span> tick := <span class="w">0</span>; tick &lt; maxTicks; tick++ {
+  engine.Step(tick)
+}</div>
+      </div>
+      <figure class="figure">
+        <div class="clock"><span class="muted">tick</span><b id="tk">0</b></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <figcaption>Each tick is one step of the loop.</figcaption>
+      </figure>
+    </div>
+  </div></section>
+
+  <section class="section" id="network"><div class="container">
+    <h2 class="title-section">Network</h2>
+    <div class="split">
+      <div class="stack">
+        <h3 class="title-item">The network is a queue of events</h3>
+        <p class="muted">Nodes never call each other. A message is an event with a sender, a receiver and a delivery tick. The engine delivers it when time gets there.</p>
+        <p class="muted">The latency is simulated: each message gets a random delay drawn from probabilities set by the fuzz level.</p>
+        <div class="chips"><span class="chip" style="--c:var(--color-ok)">low fuzz</span><span class="chip" style="--c:var(--color-candidate)">medium fuzz</span><span class="chip" style="--c:var(--color-down)">high fuzz</span></div>
+      </div>
+      <figure class="figure">
+        <div class="qhead"><span>event queue</span><span>tick <b id="qt">0</b></span></div>
+        <ul class="queue" id="queue"></ul>
+        <figcaption>Soonest delivery on top. Gone when its tick arrives.</figcaption>
+      </figure>
+    </div>
+  </div></section>
+
+  <section class="section" id="faults"><div class="container">
+    <h2 class="title-section">Fault injection</h2>
+    <p class="lead" style="margin:-2rem 0 var(--s4);max-width:42rem">The fuzz level decides how often things go wrong. Same seed, same faults.</p>
+    <div class="grid4">
+      <figure class="figure"><svg class="mini" data-scn="lat" viewBox="0 0 320 150"></svg><h3>Latency</h3><p class="muted small">A message takes some ticks to arrive. Sometimes few, sometimes many.</p></figure>
+      <figure class="figure"><svg class="mini" data-scn="dup" viewBox="0 0 320 150"></svg><h3>Duplication</h3><p class="muted small">The network delivers the same message twice. Raft must handle it.</p></figure>
+      <figure class="figure"><svg class="mini" data-scn="loss" viewBox="0 0 320 150"></svg><h3>Message loss</h3><p class="muted small">The message disappears in the network and never arrives.</p></figure>
+      <figure class="figure"><svg class="mini" data-scn="crash" viewBox="0 0 320 150"></svg><h3>Node crash</h3><p class="muted small">A node goes down, drops messages, and later comes back to life.</p></figure>
+    </div>
+  </div></section>
+
+  <section class="section" id="contact"><div class="container stack-lg">
+    <h2 class="title-section" style="margin-bottom:0">Contact</h2>
+    <p class="lead" style="max-width:42rem">Questions, ideas, suggestions or business inquiries? Write to me at this email, or open an issue on GitHub.</p>
+    <div class="contact">
+      <a class="button" href="https://github.com/juandi247/Matrix-Raft" target="_blank" rel="noopener">GitHub</a>
+      <a class="button" href="https://www.linkedin.com/in/juandiegodiazacevedo/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="button" href="mailto:juand.diazac@gmail.com">juand.diazac@gmail.com</a>
+    </div>
+  </div></section>
 </main>
 
-<footer class="footer">
-  <div class="container">Simba, a personal project on deterministic simulation testing and Raft.</div>
-</footer>
+<footer class="footer"><div class="container">Simba 🐱, a personal project on deterministic simulation testing and Raft. Made by Juandi.</div></footer>
 
+<script>
+const NS='http://www.w3.org/2000/svg';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const io=new IntersectionObserver(es=>es.forEach(e=>{e.target._v=e.isIntersecting}),{threshold:.2});
+const watch=el=>{el._v=false;io.observe(el)};
+const until=async el=>{while(!el._v)await sleep(250)};
+const mk=(p,tag,a,txt)=>{const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);if(txt!==undefined)e.textContent=txt;p.append(e);return e};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// a dot travelling from a to b (frac = how far it goes)
+function fly(svg,a,b,ms,color,frac=1){
+  const d=mk(svg,'circle',{r:6,cx:0,cy:0,fill:color});
+  d.style.filter=`drop-shadow(0 0 5px ${color})`;
+  const p=t=>`translate(${a.x+(b.x-a.x)*t}px,${a.y+(b.y-a.y)*t}px)`;
+  const an=d.animate([{transform:p(0)},{transform:p(frac)}],{duration:ms,fill:'forwards',easing:'linear'});
+  return {d,done:an.finished.catch(()=>{})};
+}
+const node=(svg,x,y,id,r=26)=>{const c=mk(svg,'circle',{cx:x,cy:y,r,class:'nd f'});mk(svg,'text',{x,y:y+4,class:'t'},id);return c};
+const hit=c=>{c.classList.remove('hit');void c.getBBox();c.classList.add('hit')};
+
+// ---- Raft: election loop ----
+(async()=>{
+  const svg=document.getElementById('raftsvg');watch(svg);
+  const P=[{x:160,y:45},{x:60,y:140},{x:260,y:140}];
+  P.forEach((a,i)=>P.slice(i+1).forEach(b=>mk(svg,'line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'ln'})));
+  const N=P.map((p,i)=>node(svg,p.x,p.y,'n'+(i+1)));
+  const R=P.map(p=>mk(svg,'text',{x:p.x,y:p.y+42,class:'tm'},'follower'));
+  const cap=mk(svg,'text',{x:160,y:205,class:'cap'},'');
+  const role=(i,c,n)=>{N[i].setAttribute('class','nd '+c);R[i].textContent=n};
+  if(reduce){role(0,'l','leader');cap.textContent='n1 is the leader';return}
+  while(true){
+    await until(svg);
+    [0,1,2].forEach(i=>role(i,'f','follower'));cap.textContent='followers wait for a heartbeat…';await sleep(1800);
+    role(0,'c','candidate');cap.textContent='timeout: n1 asks for votes';
+    await Promise.all([1,2].map(i=>fly(svg,P[0],P[i],900,css('--msg-vote')).done.then(()=>hit(N[i]))));
+    cap.textContent='votes granted';
+    const back=[1,2].map(i=>fly(svg,P[i],P[0],900,css('--msg-vote-r')));
+    await Promise.all(back.map(b=>b.done));hit(N[0]);
+    svg.querySelectorAll('circle:not(.nd)').forEach(d=>d.remove());
+    role(0,'l','leader');cap.textContent='majority: n1 is the leader';
+    for(let k=0;k<3;k++){await Promise.all([1,2].map(i=>fly(svg,P[0],P[i],800,css('--color-accent')).done.then(()=>hit(N[i]))));svg.querySelectorAll('circle:not(.nd)').forEach(d=>d.remove());await sleep(250)}
+    cap.textContent='the leader sends heartbeats';await sleep(1200);
+  }
+})();
+
+// ---- Time: an integer ----
+(()=>{
+  const box=document.getElementById('ticks'),tk=document.getElementById('tk');watch(box);
+  for(let i=0;i<20;i++)box.append(document.createElement('i'));
+  let t=0;
+  setInterval(()=>{if(!box._v||reduce)return;t++;tk.textContent=t;[...box.children].forEach((c,i)=>c.classList.toggle('on',i<=t%20))},350);
+  if(reduce)tk.textContent='42';
+})();
+
+// ---- Network: queue of events ----
+(()=>{
+  const ul=document.getElementById('queue'),qt=document.getElementById('qt');watch(ul);
+  const T=[['RequestVote','n1 → n2','--msg-vote'],['VoteGranted','n2 → n1','--msg-vote-r'],['AppendEntries','n1 → n3','--color-accent'],['NewEntry','client → n1','--msg-new']];
+  let t=0,q=[],id=0;
+  const draw=()=>{ul.replaceChildren(...q.map(m=>{const li=document.createElement('li');li.style.setProperty('--m',css(m.c));li.innerHTML=`<span>${m.n}</span><span>${m.r} @ ${m.at}</span>`;if(m.old)li.style.animation='none';m.old=true;return li}))};
+  setInterval(()=>{
+    if(!ul._v||reduce)return;
+    t++;qt.textContent=t;
+    q=q.filter(m=>m.at>t);
+    if(t%2===0&&q.length<5){const [n,r,c]=T[id++%4];q.push({n,r,c,at:t+2+(id*7)%4});q.sort((a,b)=>a.at-b.at)}
+    draw();
+  },700);
+})();
+
+// ---- DST: time machine ----
+(()=>{
+  const m=document.querySelector('.machine'),cpu=document.getElementById('cpu'),cl=document.getElementById('cl');watch(m);
+  let r=0;
+  const draw=()=>{cpu.textContent=r.toFixed(1)+' s';const h=r*24;cl.textContent=h<48?Math.round(h)+' h':(h/24).toFixed(1)+' days'};
+  if(reduce){r=10;draw();return}
+  setInterval(()=>{if(!m._v)return;r=r>=10?0:r+.1;draw()},100);
+})();
+
+// ---- Fault injection panels ----
+document.querySelectorAll('.mini').forEach(async svg=>{
+  watch(svg);
+  const A={x:50,y:60},B={x:270,y:60};
+  mk(svg,'line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,class:'ln'});
+  const a=node(svg,A.x,A.y,'n1'),b=node(svg,B.x,B.y,'n2');
+  const cap=mk(svg,'text',{x:160,y:128,class:'cap'},'');
+  const badge=mk(svg,'circle',{cx:B.x+20,cy:B.y-20,r:9,class:'badge'});
+  const bx=mk(svg,'text',{x:B.x+20,y:B.y-15,class:'t'},'✕');bx.style.opacity=0;
+  const col=css('--msg-vote');
+  const send=(ms,c=col,f=1)=>fly(svg,{x:A.x+32,y:A.y},{x:B.x-32,y:B.y},ms,c,f);
+  const clean=()=>svg.querySelectorAll('circle:not(.nd):not(.badge)').forEach(d=>d.remove());
+  const s=svg.dataset.scn;
+  if(reduce){cap.textContent={lat:'latency: 3 ticks',dup:'delivered twice',loss:'message lost',crash:'n2 is down'}[s];return}
+  const scn={
+    lat:async()=>{for(const l of [2,8]){cap.textContent=`latency: ${l} ticks`;await send(l*260).done;hit(b);clean();await sleep(500)}},
+    dup:async()=>{cap.textContent='n1 sends one message';const p1=send(1500);await sleep(350);const p2=send(1500);await p1.done;hit(b);cap.textContent='n2 gets it twice';await p2.done;hit(b);await sleep(700);clean()},
+    loss:async()=>{cap.textContent='n1 sends a message';const p=send(1800,col,.55);await p.done;p.d.setAttribute('fill',css('--color-down'));cap.textContent='lost in the network';p.d.animate([{opacity:1},{opacity:0}],{duration:800,fill:'forwards'});await sleep(1200);clean()},
+    crash:async()=>{
+      cap.textContent='n2 is alive';await send(1200).done;hit(b);clean();await sleep(400);
+      b.setAttribute('class','nd down');badge.classList.add('on');bx.style.opacity=1;cap.textContent='n2 crashed';await sleep(700);
+      const p=send(1200);await p.done;p.d.setAttribute('fill',css('--color-down'));cap.textContent='message dropped';await sleep(700);clean();
+      b.setAttribute('class','nd f');badge.classList.remove('on');bx.style.opacity=0;hit(b);cap.textContent='n2 is back to life';await sleep(1200);
+    }
+  }[s];
+  while(true){await until(svg);await scn();await sleep(400)}
+});
+</script>
 </body>
 </html>
