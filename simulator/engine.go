@@ -201,7 +201,7 @@ func initializeNodes(fuzzyProbabilites FuzzyConfig) []*newraft.Node {
 			CurrTerm: 0,
 			VotedFor: "",
 			Log: []newraft.Entry{
-				{Term: 0, Value: "SKIPPER", Index: 0},
+				{Term: 0, Value: "SIMBA", Index: 0},
 			},
 
 			CommitIndex: 0,

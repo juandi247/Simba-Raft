@@ -47,7 +47,7 @@ func (sm *SimClient) generateClientRequest(currentTick int, rng *rand.Rand) []ne
 			ReceiverId: leaderId,
 			Type:       newraft.MsgNewEntry,
 			Payload: newraft.FrontEndEntry{
-				Magic: "SKIPPER",
+				Magic: "SIMBA",
 				Entry: GenerateRandomEntry(rng),
 			},
 		},
