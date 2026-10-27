@@ -65,15 +65,17 @@ func StartVisualizationMode(port int, isHttps bool, certFilePath, keyFilePath st
 		return fmt.Errorf("certfile or keyfile not provided for https")
 	}
 
-	httpServer := server.NewHttpServer(fmt.Sprintf(":%d", port), isHttps, certFilePath, keyFilePath)
+	httpServer := server.NewHttpServer(fmt.Sprintf("0.0.0.0:%d", port), isHttps, certFilePath, keyFilePath)
 
 	go func() {
 		defer wg.Done()
 		err := httpServer.StartServer()
+		fmt.Println("Server started on port: ", port)
 		if err != nil {
 			fmt.Println("error starting server: ", err)
 			return
 		}
+
 
 	}()
 
