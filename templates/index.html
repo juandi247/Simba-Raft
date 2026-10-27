@@ -97,6 +97,15 @@ code,.mono{font-family:var(--font-mono)}
 .counters b{display:block;font-size:1.5rem;font-weight:500;color:var(--color-accent)}
 .counters span{font-size:.75rem;color:var(--color-muted)}
 .speed{text-align:center;margin-top:var(--s1);font:500 var(--text-sm)/1 var(--font-mono);color:var(--color-candidate)}
+/* matrixchecker */
+.term{min-height:17rem;margin:0;line-height:1.6}
+.term .ok{color:var(--color-ok)}.term .bad{color:var(--color-down)}.term .dim{color:var(--color-muted)}.term .pr{color:var(--color-accent)}
+.term .cur{display:inline-block;width:.55em;height:1em;vertical-align:-.15em;background:var(--color-text);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.alist{list-style:none;margin:0;padding:0}
+.alist li{padding:var(--s1) 0 var(--s1) var(--s2);border-left:2px solid var(--color-accent)}
+.alist li+li{margin-top:var(--s1)}
+.alist code{font-size:var(--text-sm);color:var(--color-text)}
 .contact{display:flex;flex-wrap:wrap;gap:var(--s2)}
 .footer{border-top:var(--border);padding:var(--s4) 0;font-size:var(--text-sm);color:var(--color-muted)}
 
@@ -109,7 +118,7 @@ code,.mono{font-family:var(--font-mono)}
 <div class="topbar"><div class="nav">
   <a class="nav__brand" href="#top"><img src="/static/simba-favicon/android-chrome-192x192.png" alt=""><span>simba 🐱</span></a>
   <nav class="nav__links" aria-label="Main">
-    <a href="#overview">Overview</a><a href="#raft">Raft</a><a href="#simba">Simba</a><a href="#dst">DST</a><a href="#time">Time</a><a href="#network">Network</a><a href="#faults">Fault injection</a><a href="#contact">Contact</a>
+    <a href="#overview">Overview</a><a href="#raft">Raft</a><a href="#simba">Simba</a><a href="#dst">DST</a><a href="#checker">Checker</a><a href="#time">Time</a><a href="#network">Network</a><a href="#faults">Fault injection</a><a href="#contact">Contact</a>
     <a class="button button--small" href="/simulation">Start simulation</a>
   </nav>
 </div></div>
@@ -197,6 +206,26 @@ code,.mono{font-family:var(--font-mono)}
         <div class="counters"><div><b id="cpu">0.0 s</b><span>real time, your CPU</span></div><div><b id="cl">0 h</b><span>time inside the cluster</span></div></div>
         <div class="speed" id="spd">10 s of CPU = 10 days of cluster</div>
         <figcaption>Illustrative numbers. No real time, no real network.</figcaption>
+      </figure>
+    </div>
+  </div></section>
+
+  <section class="section" id="checker"><div class="container">
+    <h2 class="title-section">MatrixChecker</h2>
+    <div class="split">
+      <div class="stack">
+        <h3 class="title-item">Thousands of seeds, looking for one bug</h3>
+        <p class="muted">An internal tool. It takes many seeds, runs the simulation with each one at different fuzz levels, and watches Raft the whole time.</p>
+        <p class="muted">Raft is full of assertions: rules that must always be true. The moment one is broken, the run panics. That seed is a bug, and it can be replayed exactly.</p>
+        <ul class="alist">
+          <li><code>one leader per term</code></li>
+          <li><code>committed entries never change</code></li>
+          <li><code>logs match on the same index and term</code></li>
+        </ul>
+      </div>
+      <figure class="figure">
+        <pre class="code term" id="term" aria-label="MatrixChecker running in a terminal"></pre>
+        <figcaption>A rule Raft did not expect stops the run right away.</figcaption>
       </figure>
     </div>
   </div></section>
@@ -303,6 +332,45 @@ const hit=c=>{c.classList.remove('hit');void c.getBBox();c.classList.add('hit')}
     role(0,'l','leader');cap.textContent='majority: n1 is the leader';
     for(let k=0;k<3;k++){await Promise.all([1,2].map(i=>fly(svg,P[0],P[i],800,css('--color-accent')).done.then(()=>hit(N[i]))));svg.querySelectorAll('circle:not(.nd)').forEach(d=>d.remove());await sleep(250)}
     cap.textContent='the leader sends heartbeats';await sleep(1200);
+  }
+})();
+
+// ---- MatrixChecker terminal ----
+(async()=>{
+  const t=document.getElementById('term');watch(t);
+  const ln=h=>{const d=document.createElement('div');d.innerHTML=h;t.append(d);return d};
+  const fmt=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'_');
+  const MAX=5000000;
+  if(reduce){
+    ln('<span class="pr">$</span> matrixchecker -seeds 1..1000 -fuzz low,medium,high');
+    ln('Testing SEED 134324 fuzz=low');ln('<span class="ok">✓ SEED 134324 was successful</span>');
+    ln('Testing SEED 2233 fuzz=high');ln('<span class="bad">panic: assertion failed: split brain, node 4 and node 5 are leaders in term 7</span>');return;
+  }
+  const test=async(seed,fuzz,stop)=>{
+    const d=ln('');
+    const end=stop??1;
+    for(let p=0;p<=end*100;p+=4){
+      d.innerHTML=`Testing SEED ${seed} fuzz=${fuzz} <span class="dim">tick ${fmt(Math.round(MAX*p/100))}/${fmt(MAX)}</span>`;
+      await sleep(stop?95:45);
+    }
+    return d;
+  };
+  while(true){
+    await until(t);t.replaceChildren();
+    ln('<span class="pr">$</span> matrixchecker -seeds 1..1000 -fuzz low,medium,high -maxticks 5_000_000');
+    await sleep(700);
+    for(const [seed,fuzz] of [[134324,'low'],[77012,'medium']]){
+      await test(seed,fuzz);ln(`<span class="ok">✓ SEED ${seed} was successful</span>`);await sleep(350);
+    }
+    await test(2233,'high',.31);await sleep(900);
+    ln('');
+    ln('<span class="bad">panic: assertion failed: split brain</span>');
+    ln('<span class="bad">node 4 and node 5 are leaders in term 7 (tick 1_550_212)</span>');
+    ln('<span class="dim">raft.(*Node).assertOneLeaderPerTerm</span>');
+    ln('<span class="dim">    raft/assertions.go:87</span>');
+    ln('<span class="pr">replay:</span> simulation -seed 2233 -fuzz high');
+    ln('<span class="cur"></span>');
+    await sleep(6000);
   }
 })();
 
