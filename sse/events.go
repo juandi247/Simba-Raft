@@ -123,7 +123,7 @@ func NewSimulationStopped() SimulationStoppedEvent {
 	return SimulationStoppedEvent{}
 }
 
-//boilerplate to implement the SSE interface
+// boilerplate to implement the SSE interface
 func (t TickAdvanceEvent) GetEventType() SimulatorEventType      { return TickAdvance }
 func (t NodeCrashedEvent) GetEventType() SimulatorEventType      { return NodeCrashed }
 func (t HeartbeatTimeoutEvent) GetEventType() SimulatorEventType { return HeartbeatTimeout }

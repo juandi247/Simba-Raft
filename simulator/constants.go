@@ -4,7 +4,7 @@ const TickFrequency = 1
 
 const SendAppendEntriesFreq = 40
 const ElectionTimeout = 100
-const MinHeartBeatTimeout = 60
+const MinHeartBeatTimeout = 45
 const MaxHeartBeatTimeout = 150
 
 /*

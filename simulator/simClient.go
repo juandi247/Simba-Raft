@@ -54,7 +54,7 @@ func (sm *SimClient) generateClientRequest(currentTick int, rng *rand.Rand) []ne
 	}
 }
 
-//SHOULD RETURN AN ID of the node
+// SHOULD RETURN AN ID of the node
 func pickRandomNode(rng *rand.Rand) string {
 	//takes random number between 1 - TotalNodes (including the totalNodes)
 	randomId := 1 + rng.Intn(newraft.TotalNodes)
@@ -63,7 +63,6 @@ func pickRandomNode(rng *rand.Rand) string {
 }
 
 /*
-
 forma simple
 
 si recibo un mensje que dice Lider succesfull, no hago nada.
@@ -71,8 +70,6 @@ si recibo un mensje que dice Lider succesfull, no hago nada.
 Si recibo mensaje que diga no soy lider, mira mi lider. Lo ACTUALIZAMOS
 
 si me devulev een un caso l lidr mpty, entonces me jodi supongo xd
-
-
 
 complicarla:
 podria guarar el id del mensaje que acabo de enviar o ponerle algun ID o algo y meterlo en una cola de

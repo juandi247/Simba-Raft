@@ -77,6 +77,8 @@ func (s *SimulationRunner) Start() {
 	//This is all intiial configuration preivous to the FOR loop that ocntains the running engine steps
 	nodeList := initializeNodes(s.FuzzyProbabilities)
 
+	checker := NewChecker()
+
 	for _, node := range nodeList {
 		PublishEvent(s.ShouldPublishEvents, s.EventChannel, sse.NewNodeStateUpdateEvent(node))
 		// s.EventChannel <-sse.NewNodeStateUpdateEvent(node)
@@ -129,10 +131,11 @@ func (s *SimulationRunner) Start() {
 
 			//this is ONLY to read the queue and put the messages into the inbox. No logic of delivering messages to any node here.
 			if s.Network.messageQueue.Len() > 0 {
-				readMessagesToInbox(s.Network, nodeList, s.EventChannel, s.ShouldPublishEvents)
+				readMessagesToInbox(s.Network, nodeList, s.EventChannel, s.ShouldPublishEvents, checker)
 			}
 
 			time.Sleep(time.Duration(s.SleepingTime) * time.Millisecond)
+			checker.Check(nodeList)
 
 		default:
 			panic("not valid state for running sim")
@@ -176,13 +179,12 @@ func initializeMatchIndex(friendsIds []string) map[string]int {
 func initializeNodes(fuzzyProbabilites FuzzyConfig) []*newraft.Node {
 	nodeList := make([]*newraft.Node, newraft.TotalNodes)
 
+	startingExtraTimeout := 0
 	for i := 1; i <= int(newraft.TotalNodes); i++ {
 
-		heartbeatTimeout := int(generateHeartbeatTimeout(fuzzyProbabilites.rand))
-		//TODO: ESTO ES TEMPORALLL!!!
-		// if i==1{
-		// 	heartbeatTimeout=2
-		// }
+		//NOTE: this generates separated timeouts, so that they dont collide with each other
+		heartbeatTimeout := int(generateHeartbeatTimeout(fuzzyProbabilites.rand, startingExtraTimeout))
+		startingExtraTimeout += 15
 
 		id := "Node" + strconv.Itoa(i)
 		friendsIds := buildFriendsIds(newraft.TotalNodes, i)
@@ -231,13 +233,6 @@ func crashNodes(nodeList []*newraft.Node, fuzzyProbabilites FuzzyConfig, current
 	for _, node := range nodeList {
 		shouldCrash, comeBackToLifeTick := fuzzyProbabilites.determineCrashingProbabily()
 
-		// //NOTE: temporal
-		// if currentTick ==  150 && node.Id == "Node1"{
-		// 	shouldCrash = true
-		// 	comeBackToLifeTick = 270
-		// }
-
-		// shouldCrash:=false
 		if !shouldCrash {
 			continue
 		}
@@ -249,6 +244,9 @@ func crashNodes(nodeList []*newraft.Node, fuzzyProbabilites FuzzyConfig, current
 
 func updateNodeTimers(nodeList []*newraft.Node, eventChan chan sse.SseEvent, shouldPublishEvent bool) {
 	for _, node := range nodeList {
+		if node.SimulatorFields.Alive == false {
+			continue
+		}
 		switch node.CurrentRole {
 		case newraft.FOLLOWER:
 			node.SimulatorFields.HeartbeatTimeoutCounter--
@@ -289,7 +287,7 @@ func handleComeBackToLiveNode(nodeList []*newraft.Node, currentTick uint64, shou
 	}
 }
 
-func readMessagesToInbox(sn *SimNetwork, nodeList []*newraft.Node, eventChan chan sse.SseEvent, shouldPublishEvent bool) {
+func readMessagesToInbox(sn *SimNetwork, nodeList []*newraft.Node, eventChan chan sse.SseEvent, shouldPublishEvent bool, checker *Checker) {
 
 	if sn.messageQueue.Len() <= 0 {
 		panic("wtf this hsuold be bigger than cero")
@@ -346,8 +344,8 @@ func readMessagesToInbox(sn *SimNetwork, nodeList []*newraft.Node, eventChan cha
 
 				responseMessages := node.HandleEvent(msg.Message)
 
-				//NOTE: checks split brain and that stuff
-				checkInvariants(nodeList)
+				//NOTE: Check invariants
+				checker.Check(nodeList)
 
 				PublishEvent(shouldPublishEvent, eventChan, sse.NewNodeStateUpdateEvent(node))
 				// eventChan <- sse.NewNodeStateUpdateEvent(node)

@@ -16,7 +16,9 @@ func buildFriendsIds(numberOfFriends int, nodeIndex int) []string {
 	return rta
 }
 
-func generateHeartbeatTimeout(rng *rand.Rand) uint32 {
-	t := uint32(MinHeartBeatTimeout + rng.Intn(MaxHeartBeatTimeout-MinHeartBeatTimeout+1))
+func generateHeartbeatTimeout(rng *rand.Rand, extra int) uint32 {
+	newMinimum := MinHeartBeatTimeout + extra
+	maxHeartbeatTimeout:= newMinimum + 10
+	t := uint32(newMinimum + rng.Intn(maxHeartbeatTimeout-newMinimum+1))
 	return t
 }

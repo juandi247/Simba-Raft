@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"simba/newraft"
 	"slices"
-	"sort"
 )
 
 /*
@@ -41,36 +40,20 @@ func checkSplitBrain(nodeList []*newraft.Node) {
 
 }
 
-//TODO: esto esta mal, deberia ser mucho mejor pero bue
-func checkCommitedEntries(nodeList []*newraft.Node) {
-	//ordenar los nodos de forma que queden en orden ascendente por log size
-	//comparar siempre el menor con el siguiente cada dato del log, si hay algo distinto PARAR
-	newList := nodeList
-
-	sort.Slice(newList, func(i, j int) bool { return newList[i].CommitIndex < newList[j].CommitIndex })
-
-	for i, currNode := range newList {
-		if i == 0 {
-			continue
+// TODO: esto esta mal, deberia ser mucho mejor pero bue
+func checkCommitedEntries(nodes []*newraft.Node) {
+	for _, n := range nodes {
+		if n.CommitIndex > len(n.Log)-1 {
+			panic(fmt.Sprintf("%s: commitIndex %d > lastLogIndex %d", n.Id, n.CommitIndex, len(n.Log)-1))
 		}
-
-		prevNode := newList[i-1]
-		minCommitIndex := min(currNode.CommitIndex, prevNode.CommitIndex)
-
-		if minCommitIndex == 0 {
-			continue
-		}
-
-		currNodeCommitedLog := currNode.Log[:minCommitIndex+1]
-		prevNodeCommitedLog := currNode.Log[:minCommitIndex+1]
-
-		equeal := slices.Equal(currNodeCommitedLog, prevNodeCommitedLog)
-
-		if !equeal {
-			fmt.Println("noodos: ", currNode.Id, " y : ", prevNode.Id, "no coindicen")
-			panic("logs no matchean sus datos cuando y fueron comiteados, raro")
-		}
-
 	}
-
+	for i := range nodes {
+		for j := i + 1; j < len(nodes); j++ {
+			a, b := nodes[i], nodes[j]
+			m := min(a.CommitIndex, b.CommitIndex)
+			if !slices.Equal(a.Log[:m+1], b.Log[:m+1]) {
+				panic(fmt.Sprintf("committed prefix mismatch %s vs %s", a.Id, b.Id))
+			}
+		}
+	}
 }

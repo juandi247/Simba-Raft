@@ -34,12 +34,12 @@ var FuzzyConfigMap = map[FuzzyLevel]FuzzyConfig{
 	MEDIUM: {
 		LatencyProb:     0.05,
 		MessageLostProb: 0.005,
-		NodeCrashProb:   0.0009,
+		NodeCrashProb:   0.000999,
 	},
 	HIGH: {
 		LatencyProb:     0.10,
 		MessageLostProb: 0.010,
-		NodeCrashProb:   0.000999,
+		NodeCrashProb:   0.001, // 0.1% of the time a node will crash
 	},
 }
 
@@ -71,7 +71,6 @@ func (fc *FuzzyConfig) determineCrashingProbabily() (bool, int64) {
 this functions takes the configuration, and returns
 bool: if the message its dropped or not
 int: the number of delay ticks
-
 */
 func (fc *FuzzyConfig) RandomizeNetwork() (bool, int64) {
 	randomNumber := fc.rand.Float64()
