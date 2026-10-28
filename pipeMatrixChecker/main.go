@@ -29,13 +29,13 @@ QUERIES:
 SELECT * from simulations WHERE RunState="FAILED";
 
 
-UPDATE simulations SET RunState=NULL;
+UPDATE simulations SET RunState=NULL PanicOutput=NULL;
 
 */
 
-const MAXTICKS = 100_000
-const simulatorAppPath = `.\simba-1.0.2.exe`
-const WORKERSNUMBER = 4
+const MAXTICKS = 200_000
+const simulatorAppPath = `.\simba-1.0.3.exe`
+const WORKERSNUMBER = 6
 
 func main() {
 

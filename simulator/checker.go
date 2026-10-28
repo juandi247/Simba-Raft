@@ -43,15 +43,5 @@ func (c *Checker) Check(nodes []*newraft.Node) {
 		}
 	}
 
-	// Leader Completeness: todo líder debe tener todo lo commiteado hasta ahora
-	for _, n := range nodes {
-		if n.CurrentRole != newraft.LEADER {
-			continue
-		}
-		for i, e := range c.committed {
-			if i > len(n.Log)-1 || n.Log[i] != e {
-				panic(fmt.Sprintf("Leader Completeness: %s (term %d) no tiene el index %d commiteado: %+v", n.Id, n.CurrTerm, i, e))
-			}
-		}
-	}
+	checkCommitedEntries(nodes)
 }
