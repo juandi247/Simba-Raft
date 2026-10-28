@@ -76,7 +76,6 @@ func StartVisualizationMode(port int, isHttps bool, certFilePath, keyFilePath st
 			return
 		}
 
-
 	}()
 
 	wg.Wait()
