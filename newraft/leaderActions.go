@@ -23,12 +23,15 @@ func (n *Node) HandleLeaderAction(mesage Message) []Message {
 
 	case MsgSendAppendEntriesTimeout:
 		return n.handleSendAppendEntriesTimeout()
+	//assertion!!
+	case MsgAppendEntries:
+    		panic("un líder recibió AppendEntries de su mismo term: dos líderes en el mismo term")
 	}
 
 	return nil
 }
 
-//LEADER ONLY
+// LEADER ONLY
 func (n *Node) HandleNewEntry(data string) []Message {
 
 	switch n.CurrentRole {
@@ -131,7 +134,10 @@ func (n *Node) HandleAppendEntriesResponse(requestEvent AppendEntriesResponseEve
 			return nil
 		}
 
-		n.NextIndex[followerId] = requestEvent.MatchIndex
+		n.NextIndex[followerId] = min(n.NextIndex[followerId], requestEvent.MatchIndex)
+		if n.NextIndex[followerId] < 1 {
+    			panic("NextIndex < 1")
+		}
 
 		//try again, with a lower NEXT index, to update it quickly
 		return append(messages, Message{
@@ -146,13 +152,18 @@ func (n *Node) HandleAppendEntriesResponse(requestEvent AppendEntriesResponseEve
 	n.MatchIindex[followerId] = max(n.MatchIindex[followerId], requestEvent.MatchIndex)
 	n.NextIndex[followerId] = n.MatchIindex[followerId] + 1
 
-	n.CommitIndex = max(n.CommitIndex, minQuorumValue(n.MatchIindex, Quorum))
+	// n.CommitIndex = max(n.CommitIndex, minQuorumValue(n.MatchIindex, Quorum))
+
+	N := minQuorumValue(n.MatchIindex, Quorum)
+	if N > n.CommitIndex && n.Log[N].Term == n.CurrTerm {
+		n.CommitIndex = N
+	}
 
 	//TODO: checkear last applied, pero hasta ahi estamos BIEN MELOS
 	return nil
 }
 
-//triggered when the timeout of the leader ocurs, to send the append entries to the followers
+// triggered when the timeout of the leader ocurs, to send the append entries to the followers
 func (n *Node) handleSendAppendEntriesTimeout() []Message {
 	return n.SendAppendEntries()
 }

@@ -1,5 +1,7 @@
 package newraft
 
+import "fmt"
+
 /* ---- METHODS REACTING TO INCOMING EVENTS -------- */
 func (n *Node) HandleFollowerAction(mesage Message) []Message {
 
@@ -37,6 +39,9 @@ func (n *Node) HandleFollowerAction(mesage Message) []Message {
 }
 
 func (n *Node) HandleAppendEntries(requestEvent AppendEntriesEvent) []Message {
+	if requestEvent.PrevLogIndex < 0 {
+		panic("PrevLogIndex negativo")
+	}
 
 	//this is a trick just for the simulated stuff
 	if n.SimulatorFields != nil {
@@ -83,35 +88,41 @@ func (n *Node) HandleAppendEntries(requestEvent AppendEntriesEvent) []Message {
 	}
 
 	//HAPPY PATH
-	responseEvent.Succes = true
-
-	var newMatchIndex int
-
-	if len(requestEvent.Entries) == 0 {
-		newMatchIndex = requestEvent.PrevLogIndex
-	} else {
-		newMatchIndex = requestEvent.Entries[len(requestEvent.Entries)-1].Index
-	}
-
-	for index, incomingEntry := range requestEvent.Entries {
-
-		//the entry is inside the LOG, and should be reeplaced
-		if incomingEntry.Index <= len(n.Log)-1 {
-			n.Log[incomingEntry.Index].Value = incomingEntry.Value
-			n.Log[incomingEntry.Index].Term = incomingEntry.Term
-		} else {
-			n.Log = append(n.Log, requestEvent.Entries[index:]...)
-			break
+	for i, e := range requestEvent.Entries {
+		if e.Index != requestEvent.PrevLogIndex+1+i {
+			panic("entries no consecutivas")
 		}
 	}
-	//TODO: SAVE IN STORAGE porque debe estar ya appendeado
 
-	responseEvent.MatchIndex = newMatchIndex
+	for i, e := range requestEvent.Entries {
+		if e.Index <= len(n.Log)-1 {
+			if n.Log[e.Index].Term == e.Term {
+				continue // ya la tengo (mismo index+term => misma entrada)
+			}
+			// conflicto: nunca debería tocar algo ya commiteado
+			if e.Index <= n.CommitIndex {
+				panic(fmt.Sprintf("%s: conflicto en index %d <= commitIndex %d", n.Id, e.Index, n.CommitIndex))
+			}
+			n.Log = n.Log[:e.Index] // borra la entrada en conflicto y todo lo que sigue
+		}
+		if e.Index != len(n.Log) {
+			panic("hueco al hacer append")
+		}
+		n.Log = append(n.Log, requestEvent.Entries[i:]...)
+		break
+	}
 
-	if requestEvent.LeaderCommitIndex > n.CommitIndex {
-		n.CommitIndex = min(requestEvent.LeaderCommitIndex, len(n.Log)-1)
-		/*TODO:  aca tambien deberia ir esto If commitIndex > lastApplied: increment lastApplied, apply
-		log[lastApplied] to state machine (§5.3), que signficaria que deberiamos hacer o aplciar los datos a la state machine*/
+	lastNew := requestEvent.PrevLogIndex + len(requestEvent.Entries)
+	if lastNew > len(n.Log)-1 {
+		panic("lastNew fuera del log")
+	}
+
+	responseEvent.Succes = true
+	responseEvent.MatchIndex = lastNew
+
+	newCommit := min(requestEvent.LeaderCommitIndex, lastNew)
+	if newCommit > n.CommitIndex {
+		n.CommitIndex = newCommit
 	}
 
 	responseMessage.Payload = responseEvent
@@ -154,17 +165,16 @@ func (n *Node) HandleRequestVote(requestEvent RequestVoteEvent) []Message {
 		return append(messages, responseMessage)
 	}
 
-	if requestEvent.LastLogTerm == followerLastLogIndex {
-		if requestEvent.LastLogIndex < followerLastLogIndex {
-			responseMessage.Payload = responseEventPayload
-			return append(messages, responseMessage)
-		}
+	if requestEvent.LastLogTerm == followerLastLogTerm && requestEvent.LastLogIndex < followerLastLogIndex {
+		responseMessage.Payload = responseEventPayload
+		return append(messages, responseMessage)
 
 	}
 
 	/* ----HAPPY PATH --- */
 	n.VotedFor = requestEvent.CandidateId
-	//TODO: this shouold be stored in storage
+	n.SimulatorFields.HeartbeatTimeoutCounter = n.HeartbeatTimeout // (o el valor aleatorio de 2.8)
+
 
 	responseEventPayload.VoteGranted = true
 	responseMessage.Payload = responseEventPayload
@@ -172,7 +182,7 @@ func (n *Node) HandleRequestVote(requestEvent RequestVoteEvent) []Message {
 
 }
 
-//Starts an election as soon as the transition ocurres
+// Starts an election as soon as the transition ocurres
 func (n *Node) handleHeartbeatTimeout() []Message {
 	n.updateTerm(n.CurrTerm + 1)
 	//TODO: update term on storage

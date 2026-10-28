@@ -53,7 +53,7 @@ type Node struct {
 	SimulatorFields *SimulatorFields
 }
 
-//ONLY used in the simulator, but easy to put them here.
+// ONLY used in the simulator, but easy to put them here.
 type SimulatorFields struct {
 	HeartbeatTimeoutCounter         int //follower
 	ElectionTimeoutCounter          int //candidate
@@ -80,6 +80,7 @@ func (n *Node) updateTerm(newTerm int) {
 	if newTerm <= n.CurrTerm {
 		panic("something is wrong updating the term, recevied the new term same or smaller than current term")
 	}
+	n.VotedFor = ""
 	n.CurrTerm = newTerm
 	//TODO: save in storage
 }
@@ -128,7 +129,6 @@ func (n *Node) transitionRole(target Role) []Message {
 	switch target {
 
 	case FOLLOWER:
-		n.VotedFor = ""
 		n.CurrentRole = FOLLOWER
 		//TODO: save them in storeage
 
@@ -136,10 +136,13 @@ func (n *Node) transitionRole(target Role) []Message {
 		if n.CurrentRole == LEADER {
 			panic("Assertion, can nnot pass to candidate, from LEADER")
 		}
+		
+		n.SimulatorFields.ElectionTimeoutCounter = n.ElectionTimeout // o aleatorio
+
 
 		n.CurrentRole = CANDIDATE
 		n.VotedFor = n.Id
-		for key, _ := range n.VotesGranted {
+		for key := range n.VotesGranted {
 			n.VotesGranted[key] = 0
 		}
 
@@ -149,6 +152,8 @@ func (n *Node) transitionRole(target Role) []Message {
 		if n.CurrentRole == FOLLOWER {
 			panic("Assertion, can not pass to leader, from FOLLOWER")
 		}
+
+		n.SimulatorFields.SendAppendEntriesTimeoutCounter = n.SendAppendEntriesTimeout
 
 		n.InitializeLeaderIndexes()
 		n.CurrentRole = LEADER
@@ -163,7 +168,7 @@ func (n *Node) transitionRole(target Role) []Message {
 	return nil
 }
 
-//data map comes from the matchindex or the voteGranted map, where the string is the ID (which we dont care), and the value is the value for the quorum check
+// data map comes from the matchindex or the voteGranted map, where the string is the ID (which we dont care), and the value is the value for the quorum check
 func minQuorumValue(dataMap map[string]int, quorum int) int {
 	//here we dont need to check the slice because there isnt even a valid number of votes
 	if len(dataMap) < quorum-1 {

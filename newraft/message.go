@@ -74,7 +74,7 @@ type RequestVoteResponseEvent struct {
 type TimeoutEvent struct {
 }
 
-//Boilerplate because go deos not have taggd unions, so every event must be with this interface
+// Boilerplate because go deos not have taggd unions, so every event must be with this interface
 func (a FrontEndEntry) isEventPayload()              {}
 func (a AppendEntriesEvent) isEventPayload()         {}
 func (a AppendEntriesResponseEvent) isEventPayload() {}
