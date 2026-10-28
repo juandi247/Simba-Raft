@@ -20,10 +20,21 @@ import (
     RunState TEXT,
     PanicOutput TEXT
 
+
+QUERIES: 
+ SELECT count(*) from simulations WHERE RunState="SUCCESFULL";
+ SELECT count(*) from simulations WHERE RunState="FAILED";
+ SELECT count(*) from simulations WHERE RunState is NULL;
+
+SELECT * from simulations WHERE RunState="FAILED";
+
+
+UPDATE simulations SET RunState=NULL;
+
 */
 
-const MAXTICKS = 500_000
-const simulatorAppPath = `.\simba-1.0.1.exe`
+const MAXTICKS = 100_000
+const simulatorAppPath = `.\simba-1.0.2.exe`
 const WORKERSNUMBER = 4
 
 func main() {
@@ -214,6 +225,7 @@ func runSimulator(seed int, fuzzLevel string) error {
 	}
 	defer readCloser.Close()
 
+	fmt.Println("corriendo simba ")
 	if err := cmd.Start(); err != nil {
 		fmt.Println("error running cmd: ", err)
 		return err

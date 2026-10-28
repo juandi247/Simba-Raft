@@ -1,12 +1,12 @@
 package server
 
 import (
-	"sync"
 	"github.com/google/uuid"
+	"sync"
 )
 
 type SimulatorSessionManager struct {
-	simulatorSessions sync.Map 
+	simulatorSessions sync.Map
 }
 
 func (s *SimulatorSessionManager) cleanupSession(uid uuid.UUID) {
