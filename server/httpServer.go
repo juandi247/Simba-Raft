@@ -35,7 +35,7 @@ func NewHttpServer(port string, isProd bool, certfile, keyfile string) *httpServ
 	mux.Handle("/checkmap", checkMap(SimSessionManager))
 
 	// mux.Handle("/resumesim", startSimulation(SimSessionManager) )
-	//TODO: Chcekear esto porque esta suiper mal asi tan directo
+	//TODO: Chcekear esto porqu es mas facil udrando el static fs
 	mux.Handle("/js/sim-events.js", serveStaticFiles())
 
 	staticFS := http.Dir("./templates/static")
@@ -43,6 +43,11 @@ func NewHttpServer(port string, isProd bool, certfile, keyfile string) *httpServ
 	mux.Handle("/static/", http.StripPrefix(
 		"/static/",
 		http.FileServer(staticFS),
+	))
+	jsFs := http.Dir("./templates/js")
+	mux.Handle("/js/", http.StripPrefix(
+		"/js/",
+		http.FileServer(jsFs),
 	))
 
 	server := &httpServer{
